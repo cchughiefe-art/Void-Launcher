@@ -5,6 +5,8 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@color/void_black</item>
         <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowShowWallpaper">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
         <item name="colorAccent">@color/void_accent</item>
     </style>
 </resources>

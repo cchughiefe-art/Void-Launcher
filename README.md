@@ -31,6 +31,7 @@ A small, original Android home-screen launcher built from scratch. It does not d
 - Optional lock-screen wallpaper setter, subject to manufacturer support
 - First-run setup guides the user through private PIN, default-launcher role and optional Work Profile decoy creation
 - Screenshot-protected private browser with no cache, history, persistent cookies, file access or unencrypted downloads
+- System wallpaper is rendered through Android's wallpaper window with no Files or media permission request
 
 The decoy is a launcher profile, not a separate Android user. Android Settings, notifications, Recents and deep links can still reveal activity outside the launcher.
 

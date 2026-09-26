@@ -2,7 +2,6 @@ package com.voidlauncher.app;
 
 import android.app.AlertDialog;
 import android.app.WallpaperManager;
-import android.app.WallpaperColors;
 import android.app.admin.DevicePolicyManager;
 import android.content.ComponentName;
 import android.content.Context;
@@ -29,7 +28,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.Toast;
-import android.content.res.ColorStateList;
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -98,7 +96,7 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
                 }
                 boolean fromBottom = touchDownY >= v.getHeight() - (190 * density);
                 if (fromBottom && dy <= -vertical && prefs.getBoolean("bottom_drawer_swipe", true)) {
-                    activeProfile = VoidLock.Profile.DECOY; loadApps(); showDrawer(); return true;
+                    activeProfile = VoidLock.Profile.DECOY; safeLoadApps(); showDrawer(); return true;
                 }
             }
             return true;
@@ -110,7 +108,7 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() { if (drawer.getVisibility() == View.VISIBLE) hideDrawer(); }
         });
-        loadApps();
+        safeLoadApps();
         if (!prefs.getBoolean("setup_started", false))
             findViewById(R.id.root).postDelayed(this::showFirstSetup, 650);
     }
@@ -120,7 +118,7 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
         applyPrivacyFlags();
         if (motionSensor != null && prefs.getBoolean("parallax_enabled", true) && !prefs.getBoolean("reduce_motion", false))
             sensorManager.registerListener(this, motionSensor, SensorManager.SENSOR_DELAY_UI);
-        if (adapter != null) loadApps();
+        if (adapter != null) safeLoadApps();
         if (prefs.getBoolean("setup_pin", false) && !prefs.getBoolean("work_profile_prompted", false) && !setupPromptScheduled) {
             setupPromptScheduled = true;
             findViewById(R.id.root).postDelayed(this::showWorkProfilePrompt, 1000);
@@ -171,6 +169,16 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
         showLoadedApps(new ArrayList<>(allApps), privateProfile);
     }
 
+    private void safeLoadApps() {
+        try { loadApps(); }
+        catch (Exception error) {
+            allApps.clear();
+            adapter.submit(allApps);
+            settingsButton.setVisibility(activeProfile == VoidLock.Profile.PRIVATE ? View.VISIBLE : View.GONE);
+            applyAppearance(activeProfile == VoidLock.Profile.PRIVATE);
+        }
+    }
+
     private void showLoadedApps(List<AppEntry> apps, boolean privateProfile) {
         allApps.clear(); allApps.addAll(apps);
         adapter.setShowLabels(prefs.getBoolean("show_labels", true));
@@ -186,17 +194,18 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
     }
 
     private void applyAppearance(boolean privateProfile) {
-        wallpaper.setVisibility(prefs.getBoolean("wallpaper_enabled", true) ? View.VISIBLE : View.GONE);
         wallpaperDim.setVisibility(prefs.getBoolean("wallpaper_dim", true) ? View.VISIBLE : View.GONE);
         String saved = prefs.getString(privateProfile ? "private_wallpaper" : "decoy_wallpaper", "");
-        if (!saved.isEmpty()) wallpaper.setImageURI(Uri.parse(saved));
-        else wallpaper.setImageDrawable(WallpaperManager.getInstance(this).getDrawable());
+        if (prefs.getBoolean("wallpaper_enabled", true) && !saved.isEmpty()) {
+            wallpaper.setVisibility(View.VISIBLE);
+            try { wallpaper.setImageURI(Uri.parse(saved)); }
+            catch (Exception ignored) { wallpaper.setVisibility(View.GONE); }
+        } else {
+            wallpaper.setImageDrawable(null);
+            wallpaper.setVisibility(View.GONE);
+        }
         dock.setAlpha(prefs.getBoolean("transparent_dock", true) ? 0.88f : 1f);
-        if (prefs.getBoolean("material_you", true) && android.os.Build.VERSION.SDK_INT >= 27) {
-            WallpaperColors colors = WallpaperManager.getInstance(this).getWallpaperColors(WallpaperManager.FLAG_SYSTEM);
-            if (colors != null && colors.getPrimaryColor() != null)
-                dock.setBackgroundTintList(ColorStateList.valueOf(colors.getPrimaryColor().toArgb()));
-        } else dock.setBackgroundTintList(null);
+        dock.setBackgroundTintList(null);
     }
 
     private boolean safeDecoyDefault(LauncherActivityInfo info) {
@@ -247,7 +256,7 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
             .setNegativeButton("Cancel", null).setPositiveButton("Unlock", null).create();
         dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             if (!voidLock.authenticatePrivate(pin.getText().toString())) { pin.setError("Incorrect PIN"); return; }
-            activeProfile = VoidLock.Profile.PRIVATE; loadApps(); dialog.dismiss(); showDrawer();
+            activeProfile = VoidLock.Profile.PRIVATE; safeLoadApps(); dialog.dismiss(); showDrawer();
         }));
         dialog.show();
     }
@@ -342,7 +351,7 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
                 service.startAppDetailsActivity(app.component, app.user, null, null);
             } else startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                     Uri.parse("package:" + app.component.getPackageName())));
-            loadApps(); return true;
+            safeLoadApps(); return true;
         }); menu.show();
     }
 
@@ -361,12 +370,12 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
             else if (which == 1) showLockSetup();
             else if (which == 2) { activeProfile = null; hideDrawer(); Toast.makeText(this, "Void locked", Toast.LENGTH_SHORT).show(); }
             else if (which == 3) createWorkProfile();
-            else if (which == 4) { prefs.edit().putBoolean("work_profile_enabled", !workEnabled).apply(); loadApps(); }
+            else if (which == 4) { prefs.edit().putBoolean("work_profile_enabled", !workEnabled).apply(); safeLoadApps(); }
             else if (which == 5) startActivity(new Intent(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER));
             else if (which == 6 || which == 7) { prefs.edit().putInt("columns", which == 6 ? 4 : 5).apply(); recreate(); }
             else {
                 String profile = activeProfile == VoidLock.Profile.PRIVATE ? "private_" : "decoy_";
-                prefs.edit().remove(profile + "hidden").apply(); loadApps();
+                prefs.edit().remove(profile + "hidden").apply(); safeLoadApps();
             }
         }).show();
     }

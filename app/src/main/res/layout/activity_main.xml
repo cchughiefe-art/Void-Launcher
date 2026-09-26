@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
-    android:background="@color/void_black" android:paddingLeft="16dp" android:paddingRight="16dp">
+    android:background="@android:color/transparent" android:paddingLeft="16dp" android:paddingRight="16dp">
 
     <ImageView android:id="@+id/wallpaper" android:layout_width="match_parent" android:layout_height="match_parent"
         android:layout_marginLeft="-28dp" android:layout_marginRight="-28dp" android:layout_marginTop="-28dp"
