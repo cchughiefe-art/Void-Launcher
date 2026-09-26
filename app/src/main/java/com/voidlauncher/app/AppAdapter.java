@@ -14,8 +14,10 @@ final class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
     interface Listener { void open(AppEntry app); void menu(AppEntry app, View anchor); }
     private final List<AppEntry> shown = new ArrayList<>();
     private final Listener listener;
+    private boolean showLabels = true;
 
     AppAdapter(Listener listener) { this.listener = listener; }
+    void setShowLabels(boolean value) { showLabels = value; notifyDataSetChanged(); }
 
     void submit(List<AppEntry> apps) {
         shown.clear(); shown.addAll(apps); notifyDataSetChanged();
@@ -28,7 +30,7 @@ final class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
     }
     @Override public void onBindViewHolder(@NonNull Holder h, int pos) {
         AppEntry app = shown.get(pos);
-        h.label.setText(app.label); h.icon.setImageDrawable(app.icon);
+        h.label.setText(app.label); h.label.setVisibility(showLabels ? View.VISIBLE : View.GONE); h.icon.setImageDrawable(app.icon);
         h.itemView.setOnClickListener(v -> listener.open(app));
         h.itemView.setOnLongClickListener(v -> { listener.menu(app, v); return true; });
     }

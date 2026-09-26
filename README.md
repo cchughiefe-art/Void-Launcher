@@ -2,7 +2,7 @@
 
 A small, original Android home-screen launcher built from scratch. It does not depend on Launcher3 or Lawnchair source code.
 
-## Included in v0.4
+## Included in v0.6
 
 - Registers as an Android HOME app and can become the default launcher
 - Fast alphabetized app drawer and instant search
@@ -20,8 +20,17 @@ A small, original Android home-screen launcher built from scratch. It does not d
 - Secure-window protection blocks screenshots and launcher previews in Recents
 - Search, drawer and authenticated profile state are scrubbed whenever Void loses focus
 - Optional Android Work Profile provisioning; Void remains fully usable without it
-- Work apps are visible only after the private Void PIN and never in the decoy
+- The optional Android Work Profile is the decoy space, with separate apps and app data
+- Bottom swipe shows only Work Profile apps; edge unlock shows only real personal apps
 - Correct work-profile app launching through Android's LauncherApps service
+- Pixel-inspired wallpaper-first home screen with separate private and decoy wallpaper choices
+- Bottom swipe opens the isolated Work Profile decoy app drawer
+- Invisible inward swipe from either screen edge opens private authentication
+- Gyroscope-powered perspective wallpaper with Reduce Motion control
+- Full scrollable settings page with functional privacy, appearance, gesture, drawer and profile controls
+- Optional lock-screen wallpaper setter, subject to manufacturer support
+- First-run setup guides the user through private PIN, default-launcher role and optional Work Profile decoy creation
+- Screenshot-protected private browser with no cache, history, persistent cookies, file access or unencrypted downloads
 
 The decoy is a launcher profile, not a separate Android user. Android Settings, notifications, Recents and deep links can still reveal activity outside the launcher.
 

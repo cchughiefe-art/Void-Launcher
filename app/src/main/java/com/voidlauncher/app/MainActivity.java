@@ -2,6 +2,7 @@ package com.voidlauncher.app;
 
 import android.app.AlertDialog;
 import android.app.WallpaperManager;
+import android.app.WallpaperColors;
 import android.app.admin.DevicePolicyManager;
 import android.content.ComponentName;
 import android.content.Context;
@@ -9,6 +10,10 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.LauncherActivityInfo;
 import android.content.pm.LauncherApps;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Process;
@@ -24,6 +29,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.Toast;
+import android.content.res.ColorStateList;
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -35,22 +41,31 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-public final class MainActivity extends AppCompatActivity implements AppAdapter.Listener {
+public final class MainActivity extends AppCompatActivity implements AppAdapter.Listener, SensorEventListener {
     private final List<AppEntry> allApps = new ArrayList<>();
+    private static final List<AppEntry> PRIVATE_CACHE = new ArrayList<>();
+    private static final List<AppEntry> DECOY_CACHE = new ArrayList<>();
+    static void clearAppCaches() { PRIVATE_CACHE.clear(); DECOY_CACHE.clear(); }
     private AppAdapter adapter;
     private View drawer;
     private EditText search;
     private LinearLayout dock;
     private View settingsButton;
+    private ImageView wallpaper;
+    private View wallpaperDim;
+    private SensorManager sensorManager;
+    private Sensor motionSensor;
     private SharedPreferences prefs;
     private VoidLock voidLock;
     private VoidLock.Profile activeProfile;
     private float touchDownY;
+    private float touchDownX;
+    private int gesturePointers;
+    private boolean setupPromptScheduled;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         setContentView(R.layout.activity_main);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
         prefs = getSharedPreferences("void", MODE_PRIVATE);
         voidLock = new VoidLock(this);
@@ -58,17 +73,33 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
         search = findViewById(R.id.search);
         dock = findViewById(R.id.dock);
         settingsButton = findViewById(R.id.settings);
+        wallpaper = findViewById(R.id.wallpaper);
+        wallpaperDim = findViewById(R.id.wallpaperDim);
+        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        motionSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
         RecyclerView grid = findViewById(R.id.apps);
         grid.setLayoutManager(new GridLayoutManager(this, prefs.getInt("columns", 4)));
         adapter = new AppAdapter(this);
         grid.setAdapter(adapter);
 
         findViewById(R.id.openDrawer).setOnClickListener(v -> requestDrawerUnlock());
-        settingsButton.setOnClickListener(v -> showSettings());
+        settingsButton.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
         findViewById(R.id.homeScreen).setOnTouchListener((v, event) -> {
-            if (event.getAction() == MotionEvent.ACTION_DOWN) touchDownY = event.getY();
-            if (event.getAction() == MotionEvent.ACTION_UP && touchDownY - event.getY() > 110) {
-                requestDrawerUnlock(); return true;
+            if (event.getAction() == MotionEvent.ACTION_DOWN) { touchDownY = event.getY(); touchDownX = event.getX(); gesturePointers = 1; }
+            if (event.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN) gesturePointers = Math.max(gesturePointers, event.getPointerCount());
+            if (event.getAction() == MotionEvent.ACTION_UP) {
+                float density = getResources().getDisplayMetrics().density;
+                float dx = event.getX() - touchDownX, dy = event.getY() - touchDownY;
+                float edge = 34 * density, horizontal = 90 * density, vertical = 100 * density;
+                boolean leftEdge = touchDownX <= edge && dx >= horizontal;
+                boolean rightEdge = touchDownX >= v.getWidth() - edge && dx <= -horizontal;
+                if ((leftEdge || rightEdge) && prefs.getBoolean("edge_private_swipe", true)) {
+                    requestPrivateUnlock(); return true;
+                }
+                boolean fromBottom = touchDownY >= v.getHeight() - (190 * density);
+                if (fromBottom && dy <= -vertical && prefs.getBoolean("bottom_drawer_swipe", true)) {
+                    activeProfile = VoidLock.Profile.DECOY; loadApps(); showDrawer(); return true;
+                }
             }
             return true;
         });
@@ -80,19 +111,32 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
             @Override public void handleOnBackPressed() { if (drawer.getVisibility() == View.VISIBLE) hideDrawer(); }
         });
         loadApps();
-        if (!prefs.getBoolean("default_prompted", false)) {
-            prefs.edit().putBoolean("default_prompted", true).apply();
-            findViewById(R.id.root).postDelayed(this::requestDefaultLauncher, 700);
+        if (!prefs.getBoolean("setup_started", false))
+            findViewById(R.id.root).postDelayed(this::showFirstSetup, 650);
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        applyPrivacyFlags();
+        if (motionSensor != null && prefs.getBoolean("parallax_enabled", true) && !prefs.getBoolean("reduce_motion", false))
+            sensorManager.registerListener(this, motionSensor, SensorManager.SENSOR_DELAY_UI);
+        if (adapter != null) loadApps();
+        if (prefs.getBoolean("setup_pin", false) && !prefs.getBoolean("work_profile_prompted", false) && !setupPromptScheduled) {
+            setupPromptScheduled = true;
+            findViewById(R.id.root).postDelayed(this::showWorkProfilePrompt, 1000);
         }
     }
 
-    @Override protected void onResume() { super.onResume(); if (adapter != null) loadApps(); }
+    @Override protected void onPause() {
+        sensorManager.unregisterListener(this);
+        super.onPause();
+    }
 
     @Override protected void onStop() {
         super.onStop();
-        activeProfile = null;
-        if (search != null) search.setText("");
-        if (drawer != null) drawer.setVisibility(View.GONE);
+        if (prefs.getBoolean("lock_on_leave", true)) activeProfile = null;
+        if (prefs.getBoolean("clear_search", true) && search != null) search.setText("");
+        if (drawer != null && !prefs.getBoolean("keep_drawer", true)) drawer.setVisibility(View.GONE);
     }
 
     private void loadApps() {
@@ -100,32 +144,59 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
         String profile = activeProfile == VoidLock.Profile.PRIVATE ? "private_" : "decoy_";
         Set<String> hidden = prefs.getStringSet(profile + "hidden", Collections.emptySet());
         boolean privateProfile = activeProfile == VoidLock.Profile.PRIVATE;
+        List<AppEntry> cache = privateProfile ? PRIVATE_CACHE : DECOY_CACHE;
+        if (prefs.getBoolean("cache_apps", true) && !cache.isEmpty()) {
+            showLoadedApps(cache, privateProfile);
+            return;
+        }
         List<LauncherActivityInfo> infos = new ArrayList<>();
         UserManager users = (UserManager) getSystemService(USER_SERVICE);
         for (UserHandle user : users.getUserProfiles()) {
             boolean work = !user.equals(Process.myUserHandle());
-            if (work && (!privateProfile || !prefs.getBoolean("work_profile_enabled", false))) continue;
+            if (privateProfile && work) continue;
+            if (!privateProfile && !work) continue;
+            if (!privateProfile && !prefs.getBoolean("work_profile_enabled", false)) continue;
             try { infos.addAll(service.getActivityList(null, user)); } catch (SecurityException ignored) {}
         }
-        if (!privateProfile && !prefs.getBoolean("decoy_initialized", false)) {
-            Set<String> starter = new HashSet<>();
-            for (LauncherActivityInfo info : infos) if (safeDecoyDefault(info)) starter.add(info.getComponentName().flattenToString());
-            prefs.edit().putStringSet("decoy_allowed", starter).putBoolean("decoy_initialized", true).apply();
-        }
-        Set<String> decoyAllowed = prefs.getStringSet("decoy_allowed", Collections.emptySet());
         allApps.clear();
         for (LauncherActivityInfo info : infos) {
             if (info.getComponentName().getPackageName().equals(getPackageName())) continue;
             if (hidden.contains(info.getComponentName().flattenToString())) continue;
-            if (!privateProfile && !decoyAllowed.contains(info.getComponentName().flattenToString())) continue;
             boolean work = !info.getUser().equals(Process.myUserHandle());
-            String label = info.getLabel().toString() + (work ? " · Work" : "");
+            String label = info.getLabel().toString();
             allApps.add(new AppEntry(label, info.getComponentName(), info.getBadgedIcon(0), info.getUser(), work));
         }
         allApps.sort((a,b) -> a.label.compareToIgnoreCase(b.label));
+        if (prefs.getBoolean("cache_apps", true)) { cache.clear(); cache.addAll(allApps); }
+        showLoadedApps(new ArrayList<>(allApps), privateProfile);
+    }
+
+    private void showLoadedApps(List<AppEntry> apps, boolean privateProfile) {
+        allApps.clear(); allApps.addAll(apps);
+        adapter.setShowLabels(prefs.getBoolean("show_labels", true));
         adapter.submit(allApps);
         settingsButton.setVisibility(privateProfile ? View.VISIBLE : View.GONE);
+        applyAppearance(privateProfile);
         buildDock();
+    }
+
+    private void applyPrivacyFlags() {
+        if (prefs.getBoolean("secure_window", true)) getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+    }
+
+    private void applyAppearance(boolean privateProfile) {
+        wallpaper.setVisibility(prefs.getBoolean("wallpaper_enabled", true) ? View.VISIBLE : View.GONE);
+        wallpaperDim.setVisibility(prefs.getBoolean("wallpaper_dim", true) ? View.VISIBLE : View.GONE);
+        String saved = prefs.getString(privateProfile ? "private_wallpaper" : "decoy_wallpaper", "");
+        if (!saved.isEmpty()) wallpaper.setImageURI(Uri.parse(saved));
+        else wallpaper.setImageDrawable(WallpaperManager.getInstance(this).getDrawable());
+        dock.setAlpha(prefs.getBoolean("transparent_dock", true) ? 0.88f : 1f);
+        if (prefs.getBoolean("material_you", true) && android.os.Build.VERSION.SDK_INT >= 27) {
+            WallpaperColors colors = WallpaperManager.getInstance(this).getWallpaperColors(WallpaperManager.FLAG_SYSTEM);
+            if (colors != null && colors.getPrimaryColor() != null)
+                dock.setBackgroundTintList(ColorStateList.valueOf(colors.getPrimaryColor().toArgb()));
+        } else dock.setBackgroundTintList(null);
     }
 
     private boolean safeDecoyDefault(LauncherActivityInfo info) {
@@ -166,14 +237,17 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
     }
 
     private void requestDrawerUnlock() {
+        requestPrivateUnlock();
+    }
+
+    private void requestPrivateUnlock() {
         if (!voidLock.isConfigured()) { showLockSetup(); return; }
         final EditText pin = pinField("Enter Void PIN");
         AlertDialog dialog = new AlertDialog.Builder(this).setTitle("Void Lock").setView(pin)
             .setNegativeButton("Cancel", null).setPositiveButton("Unlock", null).create();
         dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            VoidLock.Profile result = voidLock.authenticate(pin.getText().toString());
-            if (result == null) { pin.setError("Incorrect PIN"); return; }
-            activeProfile = result; loadApps(); dialog.dismiss(); showDrawer();
+            if (!voidLock.authenticatePrivate(pin.getText().toString())) { pin.setError("Incorrect PIN"); return; }
+            activeProfile = VoidLock.Profile.PRIVATE; loadApps(); dialog.dismiss(); showDrawer();
         }));
         dialog.show();
     }
@@ -191,21 +265,48 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
     private void showLockSetup() {
         final EditText privatePin = pinField("Create private PIN");
         new AlertDialog.Builder(this).setTitle("Create Void Lock").setMessage("Use 4 to 12 digits.")
-            .setView(privatePin).setNegativeButton("Cancel", null).setPositiveButton("Next", (d, w) -> {
+            .setView(privatePin).setNegativeButton("Cancel", null).setPositiveButton("Save", (d, w) -> {
                 String first = privatePin.getText().toString();
                 if (first.length() < 4 || first.length() > 12) { Toast.makeText(this, "Private PIN must have 4 to 12 digits", Toast.LENGTH_LONG).show(); return; }
-                final EditText decoyPin = pinField("Create different decoy PIN");
-                new AlertDialog.Builder(this).setTitle("Create decoy unlock").setView(decoyPin)
-                    .setNegativeButton("Cancel", null).setPositiveButton("Save", (d2, w2) -> {
-                        String second = decoyPin.getText().toString();
-                        if (second.length() < 4 || second.length() > 12 || first.equals(second)) {
-                            Toast.makeText(this, "Use a different 4 to 12 digit PIN", Toast.LENGTH_LONG).show(); return;
-                        }
-                        voidLock.configure(first, second);
-                        Toast.makeText(this, "Void Lock enabled", Toast.LENGTH_SHORT).show();
-                    }).show();
+                voidLock.configurePrivate(first);
+                prefs.edit().putBoolean("setup_pin", true).putBoolean("default_prompted", true).apply();
+                Toast.makeText(this, "Private swipe lock enabled", Toast.LENGTH_SHORT).show();
+                requestDefaultLauncher();
+                findViewById(R.id.root).postDelayed(this::showWorkProfilePrompt, 1400);
             }).show();
     }
+
+    private void showFirstSetup() {
+        if (prefs.getBoolean("setup_started", false) || isFinishing()) return;
+        new AlertDialog.Builder(this).setTitle("Set up Void Launcher")
+            .setMessage("Void will create your private PIN, ask to become the default launcher, then offer an optional isolated Work Profile decoy.")
+            .setNegativeButton("Later", (d, w) -> prefs.edit().putBoolean("setup_started", true).apply())
+            .setPositiveButton("Begin", (d, w) -> {
+                prefs.edit().putBoolean("setup_started", true).apply(); showLockSetup();
+            }).show();
+    }
+
+    private void showWorkProfilePrompt() {
+        setupPromptScheduled = false;
+        if (!hasWindowFocus()) return;
+        if (!prefs.getBoolean("setup_pin", false) || prefs.getBoolean("work_profile_prompted", false) || isFinishing()) return;
+        prefs.edit().putBoolean("work_profile_prompted", true).apply();
+        new AlertDialog.Builder(this).setTitle("Create decoy space?")
+            .setMessage("Android can create an isolated Work Profile for the bottom-swipe decoy. Its apps, accounts and data remain separate from your real personal profile.")
+            .setNegativeButton("Not now", null).setPositiveButton("Create", (d, w) -> createWorkProfile()).show();
+    }
+
+    @Override public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() != Sensor.TYPE_ROTATION_VECTOR || wallpaper == null) return;
+        float[] rotation = new float[9], orientation = new float[3];
+        SensorManager.getRotationMatrixFromVector(rotation, event.values);
+        SensorManager.getOrientation(rotation, orientation);
+        float limit = 18f * getResources().getDisplayMetrics().density;
+        wallpaper.animate().translationX(Math.max(-limit, Math.min(limit, -orientation[2] * limit)))
+            .translationY(Math.max(-limit, Math.min(limit, -orientation[1] * limit))).setDuration(90).start();
+    }
+
+    @Override public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
     private void showDrawer() { drawer.setVisibility(View.VISIBLE); search.setText(""); search.requestFocus(); }
     private void hideDrawer() {
@@ -231,15 +332,10 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
         String profile = activeProfile == VoidLock.Profile.PRIVATE ? "private_" : "decoy_";
         boolean favorite = prefs.getStringSet(profile + "favorites", Collections.emptySet()).contains(app.component.flattenToString());
         menu.getMenu().add(favorite ? "Remove from dock" : "Add to dock");
-        if (activeProfile == VoidLock.Profile.PRIVATE) {
-            boolean decoy = prefs.getStringSet("decoy_allowed", Collections.emptySet()).contains(app.component.flattenToString());
-            menu.getMenu().add(decoy ? "Remove from decoy" : "Show in decoy");
-        }
         menu.getMenu().add("App info"); menu.getMenu().add("Hide app");
         menu.setOnMenuItemClickListener(item -> {
             String title = item.getTitle().toString();
             if (title.contains("dock")) toggleSet(profile + "favorites", app.component.flattenToString());
-            else if (title.contains("decoy")) toggleSet("decoy_allowed", app.component.flattenToString());
             else if (title.equals("Hide app")) toggleSet(profile + "hidden", app.component.flattenToString());
             else if (app.work) {
                 LauncherApps service = (LauncherApps) getSystemService(LAUNCHER_APPS_SERVICE);
@@ -253,6 +349,7 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
     private void toggleSet(String key, String value) {
         Set<String> set = new HashSet<>(prefs.getStringSet(key, Collections.emptySet()));
         if (!set.add(value)) set.remove(value); prefs.edit().putStringSet(key, set).apply();
+        clearAppCaches();
     }
 
     private void showSettings() {
@@ -286,6 +383,8 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
             Toast.makeText(this, "Work Profile setup is unavailable on this phone", Toast.LENGTH_LONG).show();
             return;
         }
+        prefs.edit().putBoolean("work_profile_enabled", true).apply();
+        clearAppCaches();
         startActivity(intent);
     }
 

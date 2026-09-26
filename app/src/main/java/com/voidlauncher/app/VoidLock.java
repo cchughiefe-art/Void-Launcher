@@ -11,7 +11,12 @@ final class VoidLock {
     enum Profile { PRIVATE, DECOY }
     private final SharedPreferences prefs;
     VoidLock(Context context) { prefs = context.getSharedPreferences("void_lock", Context.MODE_PRIVATE); }
-    boolean isConfigured() { return prefs.contains("private_hash") && prefs.contains("decoy_hash"); }
+    boolean isConfigured() { return prefs.contains("private_hash"); }
+    void configurePrivate(String privatePin) {
+        byte[] privateSalt = salt();
+        prefs.edit().putString("private_salt", encode(privateSalt)).putString("private_hash", hash(privatePin, privateSalt)).apply();
+    }
+    boolean authenticatePrivate(String pin) { return matches(pin, "private"); }
     void configure(String privatePin, String decoyPin) {
         if (privatePin.equals(decoyPin)) throw new IllegalArgumentException("PINs must be different");
         byte[] privateSalt = salt(), decoySalt = salt();

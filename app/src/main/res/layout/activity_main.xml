@@ -3,6 +3,12 @@
     android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="@color/void_black" android:paddingLeft="16dp" android:paddingRight="16dp">
 
+    <ImageView android:id="@+id/wallpaper" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:layout_marginLeft="-28dp" android:layout_marginRight="-28dp" android:layout_marginTop="-28dp"
+        android:layout_marginBottom="-28dp" android:scaleType="centerCrop" android:contentDescription="@null" />
+    <View android:id="@+id/wallpaperDim" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:layout_marginLeft="-16dp" android:layout_marginRight="-16dp" android:background="#66000000" />
+
     <LinearLayout android:id="@+id/homeScreen" android:layout_width="match_parent" android:layout_height="match_parent"
         android:orientation="vertical" android:paddingTop="52dp" android:paddingBottom="18dp">
         <TextClock android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -19,11 +25,11 @@
             android:padding="10dp" />
         <TextView android:id="@+id/openDrawer" android:layout_width="match_parent" android:layout_height="48dp"
             android:layout_marginTop="10dp" android:background="@drawable/search_bg" android:gravity="center"
-            android:text="⌃  Swipe up" android:textColor="@color/void_white" android:textSize="15sp" />
+            android:text="" android:textColor="@color/void_white" android:textSize="15sp" android:visibility="gone" />
     </LinearLayout>
 
     <LinearLayout android:id="@+id/drawer" android:layout_width="match_parent" android:layout_height="match_parent"
-        android:background="@color/void_black" android:orientation="vertical" android:paddingTop="44dp"
+        android:background="#EE09090B" android:orientation="vertical" android:paddingTop="44dp"
         android:visibility="gone">
         <LinearLayout android:layout_width="match_parent" android:layout_height="56dp" android:gravity="center_vertical">
             <EditText android:id="@+id/search" android:layout_width="0dp" android:layout_height="50dp"
