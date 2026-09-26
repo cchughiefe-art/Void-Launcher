@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/void_black" android:paddingLeft="16dp" android:paddingRight="16dp">
+
+    <LinearLayout android:id="@+id/homeScreen" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:orientation="vertical" android:paddingTop="52dp" android:paddingBottom="18dp">
+        <TextClock android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:format12Hour="h:mm" android:format24Hour="HH:mm" android:textColor="@color/void_white"
+            android:textSize="54sp" android:textStyle="bold" />
+        <TextClock android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:format12Hour="EEEE, MMMM d" android:format24Hour="EEEE, MMMM d"
+            android:textColor="@color/void_muted" android:textSize="16sp" />
+
+        <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1" />
+
+        <LinearLayout android:id="@+id/dock" android:layout_width="match_parent" android:layout_height="88dp"
+            android:background="@drawable/panel" android:gravity="center" android:orientation="horizontal"
+            android:padding="10dp" />
+        <TextView android:id="@+id/openDrawer" android:layout_width="match_parent" android:layout_height="48dp"
+            android:layout_marginTop="10dp" android:background="@drawable/search_bg" android:gravity="center"
+            android:text="⌃  Swipe up" android:textColor="@color/void_white" android:textSize="15sp" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/drawer" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:background="@color/void_black" android:orientation="vertical" android:paddingTop="44dp"
+        android:visibility="gone">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="56dp" android:gravity="center_vertical">
+            <EditText android:id="@+id/search" android:layout_width="0dp" android:layout_height="50dp"
+                android:layout_weight="1" android:background="@drawable/search_bg" android:hint="Search apps"
+                android:imeOptions="actionGo" android:inputType="text" android:paddingHorizontal="18dp"
+                android:singleLine="true" android:textColor="@color/void_white" android:textColorHint="@color/void_muted" />
+            <TextView android:id="@+id/settings" android:layout_width="52dp" android:layout_height="52dp"
+                android:gravity="center" android:text="⚙" android:textColor="@color/void_white" android:textSize="24sp" />
+        </LinearLayout>
+        <androidx.recyclerview.widget.RecyclerView android:id="@+id/apps" android:layout_width="match_parent"
+            android:layout_height="0dp" android:layout_weight="1" android:clipToPadding="false"
+            android:paddingTop="18dp" android:paddingBottom="28dp" />
+    </LinearLayout>
+</FrameLayout>
