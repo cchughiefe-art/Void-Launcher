@@ -16,7 +16,6 @@ import android.os.Process;
 import android.provider.Settings;
 import android.view.View;
 import android.view.MotionEvent;
-import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -55,6 +54,7 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
     private float touchDownY;
     private float touchDownX;
     private int gesturePointers;
+    private float drawerTouchY;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -75,7 +75,7 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
         adapter = new AppAdapter(this);
         grid.setAdapter(adapter);
 
-        findViewById(R.id.openDrawer).setOnClickListener(v -> { activeProfile = Space.MAIN; applyPrivacyFlags(); safeLoadApps(); showDrawer(); });
+        findViewById(R.id.openDrawer).setOnClickListener(v -> { activeProfile = Space.MAIN; safeLoadApps(); showDrawer(); });
         settingsButton.setOnClickListener(v -> handleUtilityButton());
         findViewById(R.id.homeScreen).setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN) { touchDownY = event.getY(); touchDownX = event.getX(); gesturePointers = 1; }
@@ -83,18 +83,28 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
             if (event.getAction() == MotionEvent.ACTION_UP) {
                 float density = getResources().getDisplayMetrics().density;
                 float dx = event.getX() - touchDownX, dy = event.getY() - touchDownY;
-                float edge = 34 * density, horizontal = 90 * density, vertical = 100 * density;
+                float edge = 42 * density, horizontal = 64 * density, vertical = 48 * density;
                 boolean leftEdge = touchDownX <= edge && dx >= horizontal;
                 boolean rightEdge = touchDownX >= v.getWidth() - edge && dx <= -horizontal;
                 if ((leftEdge || rightEdge) && prefs.getBoolean("edge_private_swipe", true)) {
                     openPrivateSpace(); return true;
                 }
-                boolean fromBottom = touchDownY >= v.getHeight() - (190 * density);
+                boolean fromBottom = touchDownY >= v.getHeight() * 0.55f;
                 if (fromBottom && dy <= -vertical && prefs.getBoolean("bottom_drawer_swipe", true)) {
                     activeProfile = Space.MAIN; safeLoadApps(); showDrawer(); return true;
                 }
             }
             return true;
+        });
+        grid.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) drawerTouchY = event.getY();
+            if (event.getAction() == MotionEvent.ACTION_UP) {
+                float distance = event.getY() - drawerTouchY;
+                if (distance >= 48 * getResources().getDisplayMetrics().density && !grid.canScrollVertically(-1)) {
+                    returnHome(); return true;
+                }
+            }
+            return false;
         });
         search.addTextChangedListener(new SimpleTextWatcher(this::filter));
         search.setOnEditorActionListener((v, action, event) -> {
@@ -112,7 +122,6 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
 
     @Override protected void onResume() {
         super.onResume();
-        applyPrivacyFlags();
         if (motionSensor != null && prefs.getBoolean("parallax_enabled", true) && !prefs.getBoolean("reduce_motion", false))
             sensorManager.registerListener(this, motionSensor, SensorManager.SENSOR_DELAY_UI);
         if (adapter != null) safeLoadApps();
@@ -126,7 +135,6 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
     @Override protected void onStop() {
         super.onStop();
         if (prefs.getBoolean("lock_on_leave", true)) activeProfile = Space.MAIN;
-        applyPrivacyFlags();
         if (prefs.getBoolean("clear_search", true) && search != null) search.setText("");
         if (drawer != null && !prefs.getBoolean("keep_drawer", true)) drawer.setVisibility(View.GONE);
     }
@@ -180,12 +188,6 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
         updateUtilityButton(mainSpace);
         applyAppearance(mainSpace);
         buildDock();
-    }
-
-    private void applyPrivacyFlags() {
-        if (activeProfile == Space.PRIVATE && prefs.getBoolean("secure_window", true))
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
-        else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
     }
 
     private void applyAppearance(boolean mainSpace) {
@@ -255,7 +257,6 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
     private void openPrivateSpace() {
         PrivateAuth.authenticate(this, prefs, () -> {
             activeProfile = Space.PRIVATE;
-            applyPrivacyFlags();
             safeLoadApps();
             showDrawer();
         });
@@ -318,6 +319,11 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
     private void hideDrawer() {
         drawer.setVisibility(View.GONE);
         ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(search.getWindowToken(), 0);
+    }
+    private void returnHome() {
+        activeProfile = Space.MAIN;
+        safeLoadApps();
+        hideDrawer();
     }
 
     @Override public void open(AppEntry app) {

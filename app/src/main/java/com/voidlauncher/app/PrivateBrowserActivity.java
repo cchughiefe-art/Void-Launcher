@@ -8,7 +8,6 @@ import android.os.Bundle;
 import android.webkit.CookieManager;
 import android.webkit.URLUtil;
 import android.view.KeyEvent;
-import android.view.WindowManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebStorage;
 import android.webkit.WebView;
@@ -34,7 +33,6 @@ public final class PrivateBrowserActivity extends AppCompatActivity {
     @SuppressLint("SetJavaScriptEnabled")
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         SharedPreferences prefs = getSharedPreferences("void", MODE_PRIVATE);
         PrivateAuth.authenticate(this, prefs, this::buildBrowser);
     }
