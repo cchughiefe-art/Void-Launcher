@@ -80,7 +80,7 @@ public final class SettingsActivity extends AppCompatActivity {
         toggle("Fingerprint Private Space lock", "Require an enrolled fingerprint before entry", "biometric_private_lock", true);
         toggle("Bottom main swipe", "Swipe up from the bottom to open the full main app list", "bottom_drawer_swipe", true);
         toggle("Either-edge Private Space", "Swipe inward from the left or right edge to open Private Space", "edge_private_swipe", true);
-        toggle("Secure screenshots", "Blocks screenshots and launcher previews", "secure_window", true);
+        toggle("Protect Private Space screenshots", "Blocks screenshots only inside Private Space, Private Browser and Private Gallery", "secure_window", true);
         toggle("Close Private Space when leaving", "Returns to the main space whenever Void loses focus", "lock_on_leave", true);
         toggle("Clear app search", "Removes search text whenever Void closes", "clear_search", true);
 

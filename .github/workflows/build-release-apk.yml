@@ -43,13 +43,13 @@ jobs:
       - name: Verify APK signature
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
-          cp app/build/outputs/apk/release/app-release.apk Void-Launcher-v1.2-release.apk
+          cp app/build/outputs/apk/release/app-release.apk Void-Launcher-v1.2.1-release.apk
 
       - name: Upload signed release APK
         uses: actions/upload-artifact@v4
         with:
-          name: Void-Launcher-v1.2-signed-release
-          path: Void-Launcher-v1.2-release.apk
+          name: Void-Launcher-v1.2.1-signed-apk
+          path: Void-Launcher-v1.2.1-release.apk
           if-no-files-found: error
           retention-days: 30
 

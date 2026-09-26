@@ -37,4 +37,4 @@ Copy `~/void-launcher-release.jks` to at least one private location that only yo
 
 ## 4. Build the release
 
-Open **Actions → Build Signed Void Launcher Release → Run workflow**. Download the `Void-Launcher-v1.2-signed-release` artifact after it succeeds.
+Open **Actions → Build Signed Void Launcher Release → Run workflow**. Download the `Void-Launcher-v1.2.1-signed-apk` artifact after it succeeds.

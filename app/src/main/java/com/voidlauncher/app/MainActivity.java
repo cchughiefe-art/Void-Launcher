@@ -75,7 +75,7 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
         adapter = new AppAdapter(this);
         grid.setAdapter(adapter);
 
-        findViewById(R.id.openDrawer).setOnClickListener(v -> { activeProfile = Space.MAIN; safeLoadApps(); showDrawer(); });
+        findViewById(R.id.openDrawer).setOnClickListener(v -> { activeProfile = Space.MAIN; applyPrivacyFlags(); safeLoadApps(); showDrawer(); });
         settingsButton.setOnClickListener(v -> handleUtilityButton());
         findViewById(R.id.homeScreen).setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN) { touchDownY = event.getY(); touchDownX = event.getX(); gesturePointers = 1; }
@@ -126,6 +126,7 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
     @Override protected void onStop() {
         super.onStop();
         if (prefs.getBoolean("lock_on_leave", true)) activeProfile = Space.MAIN;
+        applyPrivacyFlags();
         if (prefs.getBoolean("clear_search", true) && search != null) search.setText("");
         if (drawer != null && !prefs.getBoolean("keep_drawer", true)) drawer.setVisibility(View.GONE);
     }
@@ -182,7 +183,8 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
     }
 
     private void applyPrivacyFlags() {
-        if (prefs.getBoolean("secure_window", true)) getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        if (activeProfile == Space.PRIVATE && prefs.getBoolean("secure_window", true))
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
     }
 
@@ -253,6 +255,7 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
     private void openPrivateSpace() {
         PrivateAuth.authenticate(this, prefs, () -> {
             activeProfile = Space.PRIVATE;
+            applyPrivacyFlags();
             safeLoadApps();
             showDrawer();
         });

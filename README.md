@@ -2,7 +2,7 @@
 
 An original Android HOME launcher with a Pixel-inspired interface and a hidden, launcher-level Private Space.
 
-## Included in v1.2
+## Included in v1.2.1
 
 - Registers as an Android HOME app and asks to become the default launcher
 - Wallpaper-first Pixel-style home, clock, translucent dock, app search and 4/5-column drawer
@@ -29,6 +29,7 @@ An original Android HOME launcher with a Pixel-inspired interface and a hidden, 
 - No Work Profile setup, launcher PIN or storage permission prompt
 - No analytics or advertising
 - Environment-based release signing with a separate GitHub Actions signed-release workflow
+- Screenshots remain available on Main, while Private Space, Private Browser and Private Gallery stay protected
 
 Private Space is a fingerprint-gated launcher area with app-internal file storage, not a separate encrypted Android user/profile. Android Settings, notifications, Recents, deep links and other apps may still reveal installed apps or activity. Use Android's system Private Space when strong OS-level isolation is required.
 
@@ -45,7 +46,7 @@ Open the folder in Android Studio and build `app`.
 
 ### Signed release APK
 
-The signed-release workflow reads the keystore and passwords only from GitHub Actions secrets. Required secrets are `VOID_KEYSTORE_B64`, `VOID_KEYSTORE_PASSWORD`, `VOID_KEY_ALIAS`, and `VOID_KEY_PASSWORD`. Run **Build Signed Void Launcher Release** manually, then download `Void-Launcher-v1.2-signed-release`.
+The signed APK workflow reads the keystore and passwords only from GitHub Actions secrets. Required secrets are `VOID_KEYSTORE_B64`, `VOID_KEYSTORE_PASSWORD`, `VOID_KEY_ALIAS`, and `VOID_KEY_PASSWORD`. Run **Build Signed Void Launcher Release** manually, then download `Void-Launcher-v1.2.1-signed-apk`.
 
 The GitHub workflow builds and signs a debug APK that can be installed for testing. For public releases, create a private signing key and configure release signing. Never commit the keystore or passwords, and retain the same key for all future updates.
 
