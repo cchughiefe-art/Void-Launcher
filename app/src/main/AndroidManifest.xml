@@ -2,7 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
-    <uses-feature android:name="android.software.managed_users" android:required="false" />
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -11,12 +10,21 @@
     </queries>
 
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@drawable/ic_void"
         android:label="Void Launcher"
         android:theme="@style/Theme.VoidLauncher">
+        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="subject_segment" />
         <activity android:name=".SettingsActivity" android:exported="false" />
+        <activity android:name=".PrivateGalleryActivity" android:exported="false" android:label="Void Private Gallery" />
         <activity android:name=".PrivateBrowserActivity" android:exported="false" android:label="Void Private Browser" />
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.privatefiles"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/private_file_paths" />
+        </provider>
         <activity
             android:name=".MainActivity"
             android:excludeFromRecents="true"
@@ -33,17 +41,5 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <receiver
-            android:name=".VoidAdminReceiver"
-            android:description="@string/work_profile_description"
-            android:exported="true"
-            android:label="Void Work Profile"
-            android:permission="android.permission.BIND_DEVICE_ADMIN">
-            <meta-data android:name="android.app.device_admin" android:resource="@xml/device_admin" />
-            <intent-filter>
-                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
-                <action android:name="android.app.action.PROFILE_PROVISIONING_COMPLETE" />
-            </intent-filter>
-        </receiver>
     </application>
 </manifest>

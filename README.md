@@ -1,39 +1,36 @@
 # Void Launcher
 
-A small, original Android home-screen launcher built from scratch. It does not depend on Launcher3 or Lawnchair source code.
+An original Android HOME launcher with a Pixel-inspired interface and a hidden, launcher-level Private Space.
 
-## Included in v0.6
+## Included in v1.2
 
-- Registers as an Android HOME app and can become the default launcher
-- Fast alphabetized app drawer and instant search
-- Long-press actions: dock, app info and hide
-- Automatic starter dock with manual favorites
-- Four- or five-column grid
-- Offline operation and no analytics, ads or network permission
-- Release build configuration with shrinking enabled
-- Swipe-up Void Lock with separate private and decoy PINs
-- Independent private and decoy docks and hidden-app lists
-- Salted, repeatedly hashed PIN storage; plaintext PINs are never saved
-- Manual immediate relock
-- Decoy allowlist: the decoy never exposes the full installed-app list
-- Private settings are unavailable from the decoy profile
-- Secure-window protection blocks screenshots and launcher previews in Recents
-- Search, drawer and authenticated profile state are scrubbed whenever Void loses focus
-- Optional Android Work Profile provisioning; Void remains fully usable without it
-- The optional Android Work Profile is the decoy space, with separate apps and app data
-- Bottom swipe shows only Work Profile apps; edge unlock shows only real personal apps
-- Correct work-profile app launching through Android's LauncherApps service
-- Pixel-inspired wallpaper-first home screen with separate private and decoy wallpaper choices
-- Bottom swipe opens the isolated Work Profile decoy app drawer
-- Invisible inward swipe from either screen edge opens private authentication
-- Gyroscope-powered perspective wallpaper with Reduce Motion control
-- Full scrollable settings page with functional privacy, appearance, gesture, drawer and profile controls
-- Optional lock-screen wallpaper setter, subject to manufacturer support
-- First-run setup guides the user through private PIN, default-launcher role and optional Work Profile decoy creation
-- Screenshot-protected private browser with no cache, history, persistent cookies, file access or unencrypted downloads
-- System wallpaper is rendered through Android's wallpaper window with no Files or media permission request
+- Registers as an Android HOME app and asks to become the default launcher
+- Wallpaper-first Pixel-style home, clock, translucent dock, app search and 4/5-column drawer
+- Swipe up from the bottom to open the complete Main app drawer
+- Swipe inward from either screen edge to open the hidden Private Space
+- Private Space has its own app allowlist, dock favorites, hidden apps and wallpaper
+- Add or remove apps from Private Space by long-pressing them in the Main drawer
+- Fingerprint lock before entering Private Space, Private Browser or Private Gallery
+- Private Gallery for imported images, videos and documents
+- Private Browser downloads save only to Void's app-internal private storage
+- Private Browser keeps no persistent history, cache or cookies
+- Automatic return to Main whenever Void loses focus, when enabled
+- Secure-window option to block screenshots and launcher previews
+- Clear and reset controls for Private Space
+- Fast PackageManager app discovery, caching, alphabetical sorting and search
+- Long-press actions for dock, Private Space, app info and hiding apps
+- Motion-parallax wallpaper with Reduce Motion control
+- Adjustable wallpaper focal point, zoom, dim strength, blur and motion intensity
+- Four built-in Pixel-style wallpapers that can be applied separately to Main, Private Space or the lock screen
+- On-device subject segmentation creates a transparent foreground layer for people, pets and objects
+- Depth wallpaper places the home clock behind the detected subject and moves both layers together with parallax
+- Automatic depth generation after choosing a wallpaper, plus manual rebuild controls
+- Separate Main and Private Space wallpapers plus an optional lock-screen wallpaper setter
+- No Work Profile setup, launcher PIN or storage permission prompt
+- No analytics or advertising
+- Environment-based release signing with a separate GitHub Actions signed-release workflow
 
-The decoy is a launcher profile, not a separate Android user. Android Settings, notifications, Recents and deep links can still reveal activity outside the launcher.
+Private Space is a fingerprint-gated launcher area with app-internal file storage, not a separate encrypted Android user/profile. Android Settings, notifications, Recents, deep links and other apps may still reveal installed apps or activity. Use Android's system Private Space when strong OS-level isolation is required.
 
 ## Build
 
@@ -41,16 +38,17 @@ Open the folder in Android Studio and build `app`.
 
 ### Build on GitHub from an Android phone
 
-1. Create a new empty GitHub repository named `void-launcher`.
-2. Upload or push everything in this project, including the `.github` folder.
-3. Open the repository's **Actions** tab.
-4. Select **Build Void Launcher APK**, then tap **Run workflow**.
-5. When the run finishes, open it and download the `Void-Launcher-v0.1-test` artifact.
+1. Push this project, including `.github`, to the repository.
+2. Open the repository's **Actions** tab.
+3. Select **Build Void Launcher APK**, then tap **Run workflow**.
+4. Download the debug test artifact when the run finishes.
 
-The workflow downloads the Android build tools on GitHub's server, so they do not consume storage on the phone. The test APK is signed automatically with a development certificate and can be installed immediately.
+### Signed release APK
 
-For the public release APK, create a private signing key and configure signing through Android Studio's **Generate Signed Bundle / APK** flow. Never commit the keystore or its passwords. Keep the key permanently because future updates must use the same key.
+The signed-release workflow reads the keystore and passwords only from GitHub Actions secrets. Required secrets are `VOID_KEYSTORE_B64`, `VOID_KEYSTORE_PASSWORD`, `VOID_KEY_ALIAS`, and `VOID_KEY_PASSWORD`. Run **Build Signed Void Launcher Release** manually, then download `Void-Launcher-v1.2-signed-release`.
+
+The GitHub workflow builds and signs a debug APK that can be installed for testing. For public releases, create a private signing key and configure release signing. Never commit the keystore or passwords, and retain the same key for all future updates.
 
 ## Next milestones
 
-Workspace pages, draggable icons, folders, widgets, notification dots, gestures, icon packs, backup/restore and a full visual settings screen.
+Workspace pages, draggable icons, folders, widgets, notification dots, icon packs, backup/restore and an encrypted local vault.

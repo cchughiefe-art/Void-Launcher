@@ -3,7 +3,7 @@
     android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="@android:color/transparent" android:paddingLeft="16dp" android:paddingRight="16dp">
 
-    <ImageView android:id="@+id/wallpaper" android:layout_width="match_parent" android:layout_height="match_parent"
+    <com.voidlauncher.app.ParallaxWallpaperView android:id="@+id/wallpaper" android:layout_width="match_parent" android:layout_height="match_parent"
         android:layout_marginLeft="-28dp" android:layout_marginRight="-28dp" android:layout_marginTop="-28dp"
         android:layout_marginBottom="-28dp" android:scaleType="centerCrop" android:contentDescription="@null" />
     <View android:id="@+id/wallpaperDim" android:layout_width="match_parent" android:layout_height="match_parent"
@@ -25,8 +25,14 @@
             android:padding="10dp" />
         <TextView android:id="@+id/openDrawer" android:layout_width="match_parent" android:layout_height="48dp"
             android:layout_marginTop="10dp" android:background="@drawable/search_bg" android:gravity="center"
-            android:text="" android:textColor="@color/void_white" android:textSize="15sp" android:visibility="gone" />
+            android:text="G   Search your apps" android:textColor="@color/void_white" android:textSize="15sp" />
     </LinearLayout>
+
+    <com.voidlauncher.app.ParallaxWallpaperView android:id="@+id/wallpaperForeground"
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:layout_marginLeft="-28dp" android:layout_marginRight="-28dp" android:layout_marginTop="-28dp"
+        android:layout_marginBottom="-28dp" android:clickable="false" android:focusable="false"
+        android:contentDescription="@null" android:visibility="gone" />
 
     <LinearLayout android:id="@+id/drawer" android:layout_width="match_parent" android:layout_height="match_parent"
         android:background="#EE09090B" android:orientation="vertical" android:paddingTop="44dp"

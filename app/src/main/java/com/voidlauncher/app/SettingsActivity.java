@@ -3,8 +3,6 @@ package com.voidlauncher.app;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.WallpaperManager;
-import android.app.admin.DevicePolicyManager;
-import android.content.ComponentName;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -14,7 +12,6 @@ import android.provider.Settings;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.EditText;
 import android.widget.ScrollView;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -41,7 +38,7 @@ public final class SettingsActivity extends AppCompatActivity {
         TextView title = text("Void settings", 30, Color.WHITE);
         title.setTypeface(null, android.graphics.Typeface.BOLD);
         content.addView(title);
-        content.addView(text("Pixel-style controls for each Void identity", 14, 0xffaaaab5));
+        content.addView(text("Pixel-style controls for Main and Private Space", 14, 0xffaaaab5));
 
         section("Appearance");
         toggle("Wallpaper background", "Show wallpaper behind the home screen", "wallpaper_enabled", true);
@@ -49,33 +46,60 @@ public final class SettingsActivity extends AppCompatActivity {
         toggle("Motion parallax", "Wallpaper responds gently when the phone tilts", "parallax_enabled", true);
         toggle("Reduce motion", "Disables movement and longer animations", "reduce_motion", false);
         toggle("Transparent dock", "Use a translucent Pixel-style dock", "transparent_dock", true);
-        toggle("Material You colours", "Derive launcher accents from the wallpaper", "material_you", true);
-        button("Choose decoy wallpaper", v -> chooseWallpaper(0));
-        button("Choose private wallpaper", v -> chooseWallpaper(1));
+        button("Choose Private Space wallpaper", v -> chooseWallpaper(0));
+        button("Choose main wallpaper", v -> chooseWallpaper(1));
         button("Set lock-screen wallpaper", v -> chooseWallpaper(2));
 
+        section("Built-in wallpapers");
+        button("Void Purple", v -> choosePreset("builtin:void", R.drawable.wallpaper_void));
+        button("Pixel Blue", v -> choosePreset("builtin:blue", R.drawable.wallpaper_pixel_blue));
+        button("Sunrise", v -> choosePreset("builtin:sunrise", R.drawable.wallpaper_sunrise));
+        button("Emerald", v -> choosePreset("builtin:emerald", R.drawable.wallpaper_emerald));
+
+        section("Wallpaper layout");
+        button("Focus: top", v -> setString("wallpaper_focus", "top", "Wallpaper focus set to top"));
+        button("Focus: center", v -> setString("wallpaper_focus", "center", "Wallpaper focus set to center"));
+        button("Focus: bottom", v -> setString("wallpaper_focus", "bottom", "Wallpaper focus set to bottom"));
+        button("Zoom: subtle", v -> setInt("wallpaper_zoom", 106, "Subtle wallpaper zoom"));
+        button("Zoom: balanced", v -> setInt("wallpaper_zoom", 110, "Balanced wallpaper zoom"));
+        button("Zoom: deep", v -> setInt("wallpaper_zoom", 120, "Deep wallpaper zoom"));
+        button("Dim: light", v -> setInt("wallpaper_dim_strength", 22, "Light wallpaper dim"));
+        button("Dim: balanced", v -> setInt("wallpaper_dim_strength", 40, "Balanced wallpaper dim"));
+        button("Dim: dark", v -> setInt("wallpaper_dim_strength", 62, "Dark wallpaper dim"));
+        toggle("Wallpaper blur", "Soft blur on Android 12 and newer", "wallpaper_blur", false);
+        toggle("Depth subject over clock", "Place a detected person, pet or object in front of the home clock", "depth_effect", true);
+        button("Rebuild Main depth layer", v -> rebuildDepth("main"));
+        button("Rebuild Private depth layer", v -> rebuildDepth("private"));
+        button("Motion: gentle", v -> setInt("parallax_strength", 10, "Gentle wallpaper motion"));
+        button("Motion: balanced", v -> setInt("parallax_strength", 18, "Balanced wallpaper motion"));
+        button("Motion: strong", v -> setInt("parallax_strength", 28, "Strong wallpaper motion"));
+
         section("Unlock and privacy");
-        button("Create or change private PIN", v -> changePrivatePin());
         button("Open Void Private Browser", v -> startActivity(new Intent(this, PrivateBrowserActivity.class)));
-        toggle("Bottom decoy swipe", "Swipe up from the bottom to open the decoy app list", "bottom_drawer_swipe", true);
-        toggle("Either-edge private swipe", "Swipe inward from the left or right edge for private unlock", "edge_private_swipe", true);
+        button("Open Private Gallery", v -> startActivity(new Intent(this, PrivateGalleryActivity.class)));
+        toggle("Fingerprint Private Space lock", "Require an enrolled fingerprint before entry", "biometric_private_lock", true);
+        toggle("Bottom main swipe", "Swipe up from the bottom to open the full main app list", "bottom_drawer_swipe", true);
+        toggle("Either-edge Private Space", "Swipe inward from the left or right edge to open Private Space", "edge_private_swipe", true);
         toggle("Secure screenshots", "Blocks screenshots and launcher previews", "secure_window", true);
-        toggle("Lock when leaving", "Returns to decoy whenever Void loses focus", "lock_on_leave", true);
-        toggle("Clear private search", "Removes search text whenever Void locks", "clear_search", true);
+        toggle("Close Private Space when leaving", "Returns to the main space whenever Void loses focus", "lock_on_leave", true);
+        toggle("Clear app search", "Removes search text whenever Void closes", "clear_search", true);
 
         section("App drawer");
         toggle("Cache app list", "Show saved app information immediately", "cache_apps", true);
         toggle("Keep drawer ready", "Keeps the drawer mounted after first opening", "keep_drawer", true);
         toggle("Show app labels", "Display names below icons", "show_labels", true);
-        toggle("Work Profile decoy", "Use isolated Work Profile apps and data as the bottom-swipe decoy", "work_profile_enabled", false);
-        button("Create the Work Profile decoy", v -> createWorkProfile());
+        button("Use 4-column grid", v -> setColumns(4));
+        button("Use 5-column grid", v -> setColumns(5));
+
+        section("Private Space");
+        button("Clear Private Space app list", v -> clearPrivateApps());
+        button("Reset Private Space", v -> resetPrivateSpace());
 
         section("Gestures");
         disabled("Swipe down for notifications", "Needs an approved Accessibility action on this phone");
         disabled("Double tap to lock", "Needs an approved Accessibility action on this phone");
 
-        section("Coming after the v0.5 engine");
-        disabled("Depth subject over clock", "Needs on-device subject segmentation");
+        section("Planned upgrades");
         disabled("Face-follow wallpaper", "Needs a camera-based tracking engine and explicit camera permission");
         disabled("Folders and draggable icons", "Needs the new workspace database");
         disabled("Android widgets", "Needs AppWidget host support");
@@ -93,52 +117,21 @@ public final class SettingsActivity extends AppCompatActivity {
         startActivityForResult(pick, PICK_WALLPAPER);
     }
 
-    private void changePrivatePin() {
-        VoidLock lock = new VoidLock(this);
-        if (lock.isConfigured()) {
-            EditText current = pinField("Current private PIN");
-            AlertDialog verify = new AlertDialog.Builder(this).setTitle("Verify private PIN").setView(current)
-                .setNegativeButton("Cancel", null).setPositiveButton("Continue", null).create();
-            verify.setOnShowListener(ignored -> verify.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-                if (!lock.authenticatePrivate(current.getText().toString())) { current.setError("Incorrect PIN"); return; }
-                verify.dismiss(); showNewPrivatePin(lock);
-            }));
-            verify.show(); return;
-        }
-        showNewPrivatePin(lock);
-    }
-
-    private void showNewPrivatePin(VoidLock lock) {
-        EditText pin = new EditText(this);
-        pin.setHint("New 4 to 12 digit PIN"); pin.setSingleLine(true);
-        pin.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD);
-        new AlertDialog.Builder(this).setTitle("Private swipe PIN").setView(pin).setNegativeButton("Cancel", null)
-            .setPositiveButton("Save", (dialog, which) -> {
-                String value = pin.getText().toString();
-                if (value.length() < 4 || value.length() > 12) { Toast.makeText(this, "PIN must have 4 to 12 digits", Toast.LENGTH_LONG).show(); return; }
-                lock.configurePrivate(value); Toast.makeText(this, "Private PIN updated", Toast.LENGTH_SHORT).show();
+    private void choosePreset(String preset, int drawable) {
+        new AlertDialog.Builder(this).setTitle("Apply wallpaper to")
+            .setItems(new String[]{"Main home", "Private Space", "Lock screen"}, (dialog, which) -> {
+                if (which == 2) {
+                    try {
+                        WallpaperManager.getInstance(this).setResource(drawable, WallpaperManager.FLAG_LOCK);
+                        Toast.makeText(this, "Lock-screen wallpaper updated", Toast.LENGTH_SHORT).show();
+                    } catch (Exception error) { Toast.makeText(this, "This phone blocked the lock-screen change", Toast.LENGTH_LONG).show(); }
+                } else {
+                    String space = which == 0 ? "main" : "private";
+                    clearDepth(space);
+                    prefs.edit().putString(space + "_wallpaper", preset).apply();
+                    Toast.makeText(this, which == 0 ? "Main wallpaper updated" : "Private wallpaper updated", Toast.LENGTH_SHORT).show();
+                }
             }).show();
-    }
-
-    private EditText pinField(String hint) {
-        EditText field = new EditText(this); field.setHint(hint); field.setSingleLine(true);
-        field.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD);
-        return field;
-    }
-
-    private void createWorkProfile() {
-        if (!getPackageManager().hasSystemFeature(android.content.pm.PackageManager.FEATURE_MANAGED_USERS)) {
-            Toast.makeText(this, "This phone does not support Android Work Profiles", Toast.LENGTH_LONG).show(); return;
-        }
-        Intent intent = new Intent(DevicePolicyManager.ACTION_PROVISION_MANAGED_PROFILE);
-        intent.putExtra(DevicePolicyManager.EXTRA_PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME,
-            new ComponentName(this, VoidAdminReceiver.class));
-        if (intent.resolveActivity(getPackageManager()) == null) {
-            Toast.makeText(this, "Work Profile setup is unavailable on this phone", Toast.LENGTH_LONG).show(); return;
-        }
-        prefs.edit().putBoolean("work_profile_enabled", true).apply();
-        MainActivity.clearAppCaches();
-        startActivity(intent);
     }
 
     @Override protected void onActivityResult(int request, int result, Intent data) {
@@ -152,9 +145,41 @@ public final class SettingsActivity extends AppCompatActivity {
                 Toast.makeText(this, "Lock-screen wallpaper updated", Toast.LENGTH_SHORT).show();
             } catch (Exception error) { Toast.makeText(this, "This phone blocked lock-screen wallpaper changes", Toast.LENGTH_LONG).show(); }
         } else {
-            prefs.edit().putString(wallpaperTarget == 0 ? "decoy_wallpaper" : "private_wallpaper", uri.toString()).apply();
+            String space = wallpaperTarget == 0 ? "private" : "main";
+            clearDepth(space);
+            prefs.edit().putString(space + "_wallpaper", uri.toString()).apply();
             Toast.makeText(this, "Wallpaper saved", Toast.LENGTH_SHORT).show();
+            generateDepth(space, uri.toString());
         }
+    }
+
+    private void rebuildDepth(String space) {
+        String wallpaper = prefs.getString(space + "_wallpaper", "");
+        if (wallpaper.isEmpty()) wallpaper = "builtin:void";
+        clearDepth(space); generateDepth(space, wallpaper);
+    }
+
+    private void generateDepth(String space, String wallpaperValue) {
+        Toast.makeText(this, "Generating " + space + " depth layer…", Toast.LENGTH_LONG).show();
+        WallpaperDepthEngine.Callback callback = (success, message) -> runOnUiThread(() ->
+            Toast.makeText(this, message, success ? Toast.LENGTH_SHORT : Toast.LENGTH_LONG).show());
+        int resource = presetDrawable(wallpaperValue);
+        if (resource != 0) WallpaperDepthEngine.generate(this, resource, space, callback);
+        else WallpaperDepthEngine.generate(this, Uri.parse(wallpaperValue), space, callback);
+    }
+
+    private int presetDrawable(String value) {
+        if ("builtin:void".equals(value)) return R.drawable.wallpaper_void;
+        if ("builtin:blue".equals(value)) return R.drawable.wallpaper_pixel_blue;
+        if ("builtin:sunrise".equals(value)) return R.drawable.wallpaper_sunrise;
+        if ("builtin:emerald".equals(value)) return R.drawable.wallpaper_emerald;
+        return 0;
+    }
+
+    private void clearDepth(String space) {
+        String old = prefs.getString("depth_" + space + "_path", "");
+        if (!old.isEmpty()) new java.io.File(old).delete();
+        prefs.edit().remove("depth_" + space + "_path").apply();
     }
 
     private void section(String name) {
@@ -176,6 +201,28 @@ public final class SettingsActivity extends AppCompatActivity {
     private void button(String label, View.OnClickListener action) {
         Button button = new Button(this); button.setText(label); button.setAllCaps(false); button.setOnClickListener(action);
         content.addView(button, new LinearLayout.LayoutParams(-1, -2));
+    }
+    private void setColumns(int columns) {
+        prefs.edit().putInt("columns", columns).apply();
+        Toast.makeText(this, columns + " columns selected; reopen Void to apply", Toast.LENGTH_SHORT).show();
+    }
+    private void clearPrivateApps() {
+        prefs.edit().putStringSet("private_allowed", new java.util.HashSet<>()).putBoolean("private_initialized", true).apply();
+        MainActivity.clearAppCaches();
+        Toast.makeText(this, "Private Space app list cleared", Toast.LENGTH_SHORT).show();
+    }
+    private void resetPrivateSpace() {
+        clearDepth("private");
+        prefs.edit().remove("private_allowed").remove("private_initialized").remove("private_favorites")
+            .remove("private_hidden").remove("private_wallpaper").apply();
+        MainActivity.clearAppCaches();
+        Toast.makeText(this, "Private Space reset", Toast.LENGTH_SHORT).show();
+    }
+    private void setInt(String key, int value, String message) {
+        prefs.edit().putInt(key, value).apply(); Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+    private void setString(String key, String value, String message) {
+        prefs.edit().putString(key, value).apply(); Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
     private TextView text(String value, int size, int color) { TextView v = new TextView(this); v.setText(value); v.setTextSize(size); v.setTextColor(color); return v; }
     private int dp(int value) { return (int)(value * getResources().getDisplayMetrics().density); }
