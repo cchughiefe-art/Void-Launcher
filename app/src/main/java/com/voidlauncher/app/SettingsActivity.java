@@ -6,6 +6,9 @@ import android.app.WallpaperManager;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
+import android.content.res.ColorStateList;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -26,12 +29,14 @@ public final class SettingsActivity extends AppCompatActivity {
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
+        getWindow().setStatusBarColor(0xff0f0f12);
+        getWindow().setNavigationBarColor(0xff0f0f12);
         prefs = getSharedPreferences("void", MODE_PRIVATE);
         ScrollView scroll = new ScrollView(this);
         scroll.setBackgroundColor(Color.rgb(15, 15, 18));
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(20), dp(28), dp(20), dp(48));
+        content.setPadding(dp(18), dp(54), dp(18), dp(64));
         scroll.addView(content);
         setContentView(scroll);
 
@@ -93,16 +98,6 @@ public final class SettingsActivity extends AppCompatActivity {
         section("Private Space");
         button("Clear Private Space app list", v -> clearPrivateApps());
         button("Reset Private Space", v -> resetPrivateSpace());
-
-        section("Gestures");
-        disabled("Swipe down for notifications", "Needs an approved Accessibility action on this phone");
-        disabled("Double tap to lock", "Needs an approved Accessibility action on this phone");
-
-        section("Planned upgrades");
-        disabled("Face-follow wallpaper", "Needs a camera-based tracking engine and explicit camera permission");
-        disabled("Folders and draggable icons", "Needs the new workspace database");
-        disabled("Android widgets", "Needs AppWidget host support");
-        disabled("Encrypted Void Vault", "Will encrypt private photos, documents and browser downloads with Android Keystore");
 
         section("System");
         button("Default launcher settings", v -> startActivity(new Intent(Settings.ACTION_HOME_SETTINGS)));
@@ -189,17 +184,22 @@ public final class SettingsActivity extends AppCompatActivity {
     private void toggle(String title, String summary, String key, boolean fallback) {
         Switch control = new Switch(this);
         control.setText(title + "\n" + summary); control.setTextColor(Color.WHITE); control.setTextSize(15);
-        control.setPadding(0, dp(8), 0, dp(8)); control.setChecked(prefs.getBoolean(key, fallback));
+        control.setPadding(dp(14), dp(12), dp(12), dp(12)); control.setMinHeight(dp(72));
+        GradientDrawable background = new GradientDrawable(); background.setColor(0xff17151c); background.setCornerRadius(dp(18));
+        control.setBackground(background); control.setChecked(prefs.getBoolean(key, fallback));
         control.setOnCheckedChangeListener((v, checked) -> { prefs.edit().putBoolean(key, checked).apply(); MainActivity.clearAppCaches(); });
-        content.addView(control, new LinearLayout.LayoutParams(-1, -2));
-    }
-    private void disabled(String title, String summary) {
-        TextView view = text(title + "\n" + summary + "\nComing soon", 14, 0xff72727d);
-        view.setPadding(0, dp(10), 0, dp(10)); content.addView(view);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2); params.setMargins(0, dp(4), 0, dp(4));
+        content.addView(control, params);
     }
     private void button(String label, View.OnClickListener action) {
-        Button button = new Button(this); button.setText(label); button.setAllCaps(false); button.setOnClickListener(action);
-        content.addView(button, new LinearLayout.LayoutParams(-1, -2));
+        Button button = new Button(this); button.setText(label); button.setAllCaps(false); button.setTextColor(Color.WHITE);
+        button.setTextSize(15); button.setMinHeight(dp(56)); button.setPadding(dp(16), dp(10), dp(16), dp(10));
+        GradientDrawable card = new GradientDrawable(); card.setColor(0xff24212b); card.setCornerRadius(dp(18));
+        card.setStroke(dp(1), 0xff3a3544);
+        button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x337c4dff), card, null));
+        button.setOnClickListener(action);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(58)); params.setMargins(0, dp(4), 0, dp(4));
+        content.addView(button, params);
     }
     private void setColumns(int columns) {
         prefs.edit().putInt("columns", columns).apply();

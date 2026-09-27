@@ -315,10 +315,19 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
 
     @Override public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
-    private void showDrawer() { drawer.setVisibility(View.VISIBLE); search.setText(""); search.requestFocus(); }
+    private void showDrawer() {
+        search.setText(""); search.clearFocus();
+        drawer.setVisibility(View.VISIBLE);
+        if (prefs.getBoolean("reduce_motion", false)) { drawer.setAlpha(1f); drawer.setTranslationY(0f); return; }
+        drawer.setAlpha(0f); drawer.setTranslationY(72f * getResources().getDisplayMetrics().density);
+        drawer.animate().alpha(1f).translationY(0f).setDuration(220).start();
+    }
     private void hideDrawer() {
-        drawer.setVisibility(View.GONE);
         ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(search.getWindowToken(), 0);
+        search.clearFocus();
+        if (prefs.getBoolean("reduce_motion", false)) { drawer.setVisibility(View.GONE); return; }
+        drawer.animate().alpha(0f).translationY(64f * getResources().getDisplayMetrics().density).setDuration(180)
+            .withEndAction(() -> { drawer.setVisibility(View.GONE); drawer.setAlpha(1f); drawer.setTranslationY(0f); }).start();
     }
     private void returnHome() {
         activeProfile = Space.MAIN;

@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
-    android:background="@android:color/transparent" android:paddingLeft="16dp" android:paddingRight="16dp">
+    android:background="@android:color/transparent">
 
     <com.voidlauncher.app.ParallaxWallpaperView android:id="@+id/wallpaper" android:layout_width="match_parent" android:layout_height="match_parent"
-        android:layout_marginLeft="-28dp" android:layout_marginRight="-28dp" android:layout_marginTop="-28dp"
-        android:layout_marginBottom="-28dp" android:scaleType="centerCrop" android:contentDescription="@null" />
+        android:scaleType="centerCrop" android:contentDescription="@null" />
     <View android:id="@+id/wallpaperDim" android:layout_width="match_parent" android:layout_height="match_parent"
-        android:layout_marginLeft="-16dp" android:layout_marginRight="-16dp" android:background="#66000000" />
+        android:background="#66000000" />
 
     <LinearLayout android:id="@+id/homeScreen" android:layout_width="match_parent" android:layout_height="match_parent"
-        android:orientation="vertical" android:paddingTop="52dp" android:paddingBottom="18dp">
+        android:orientation="vertical" android:paddingLeft="20dp" android:paddingTop="52dp"
+        android:paddingRight="20dp" android:paddingBottom="30dp">
         <TextClock android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:format12Hour="h:mm" android:format24Hour="HH:mm" android:textColor="@color/void_white"
             android:textSize="54sp" android:textStyle="bold" />
@@ -20,23 +20,25 @@
 
         <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1" />
 
-        <LinearLayout android:id="@+id/dock" android:layout_width="match_parent" android:layout_height="88dp"
+        <LinearLayout android:id="@+id/dock" android:layout_width="match_parent" android:layout_height="82dp"
             android:background="@drawable/panel" android:gravity="center" android:orientation="horizontal"
             android:padding="10dp" />
-        <TextView android:id="@+id/openDrawer" android:layout_width="match_parent" android:layout_height="48dp"
+        <TextView android:id="@+id/openDrawer" android:layout_width="match_parent" android:layout_height="52dp"
             android:layout_marginTop="10dp" android:background="@drawable/search_bg" android:gravity="center"
-            android:text="G   Search your apps" android:textColor="@color/void_white" android:textSize="15sp" />
+            android:paddingHorizontal="20dp" android:text="⌕   Search apps" android:textColor="@color/void_white" android:textSize="16sp" />
     </LinearLayout>
 
     <com.voidlauncher.app.ParallaxWallpaperView android:id="@+id/wallpaperForeground"
         android:layout_width="match_parent" android:layout_height="match_parent"
-        android:layout_marginLeft="-28dp" android:layout_marginRight="-28dp" android:layout_marginTop="-28dp"
-        android:layout_marginBottom="-28dp" android:clickable="false" android:focusable="false"
+        android:clickable="false" android:focusable="false"
         android:contentDescription="@null" android:visibility="gone" />
 
     <LinearLayout android:id="@+id/drawer" android:layout_width="match_parent" android:layout_height="match_parent"
-        android:background="#EE09090B" android:orientation="vertical" android:paddingTop="44dp"
+        android:background="#FF0B0A0F" android:orientation="vertical" android:paddingLeft="16dp"
+        android:paddingTop="38dp" android:paddingRight="16dp"
         android:visibility="gone">
+        <View android:layout_width="36dp" android:layout_height="4dp" android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="14dp" android:background="@drawable/drawer_handle" />
         <LinearLayout android:layout_width="match_parent" android:layout_height="56dp" android:gravity="center_vertical">
             <EditText android:id="@+id/search" android:layout_width="0dp" android:layout_height="50dp"
                 android:layout_weight="1" android:background="@drawable/search_bg" android:hint="Search apps"
@@ -47,6 +49,6 @@
         </LinearLayout>
         <androidx.recyclerview.widget.RecyclerView android:id="@+id/apps" android:layout_width="match_parent"
             android:layout_height="0dp" android:layout_weight="1" android:clipToPadding="false"
-            android:paddingTop="18dp" android:paddingBottom="28dp" />
+            android:paddingTop="20dp" android:paddingBottom="96dp" />
     </LinearLayout>
 </FrameLayout>

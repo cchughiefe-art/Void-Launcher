@@ -2,7 +2,7 @@
 
 An original Android HOME launcher with a Pixel-inspired interface and a hidden, launcher-level Private Space.
 
-## Included in v1.2.2
+## Included in v1.3
 
 - Registers as an Android HOME app and asks to become the default launcher
 - Wallpaper-first Pixel-style home, clock, translucent dock, app search and 4/5-column drawer
@@ -18,6 +18,10 @@ An original Android HOME launcher with a Pixel-inspired interface and a hidden, 
 - Screenshots are allowed throughout the launcher
 - Easier short swipe-up gesture opens the app drawer from the lower half of the home screen
 - Pulling down at the top of the app drawer returns to the home screen
+- Full-width edge-to-edge home wallpaper with corrected system-bar spacing
+- Opaque Pixel-style app drawer with a pull handle, safer bottom inset and smooth open/close motion
+- Dark rounded Settings cards replace the default grey Android buttons
+- Unfinished placeholder controls removed from Settings
 - Clear and reset controls for Private Space
 - Fast PackageManager app discovery, caching, alphabetical sorting and search
 - Long-press actions for dock, Private Space, app info and hiding apps
@@ -47,7 +51,7 @@ Open the folder in Android Studio and build `app`.
 
 ### Signed release APK
 
-The signed APK workflow reads the keystore and passwords only from GitHub Actions secrets. Required secrets are `VOID_KEYSTORE_B64`, `VOID_KEYSTORE_PASSWORD`, `VOID_KEY_ALIAS`, and `VOID_KEY_PASSWORD`. Run **Build Signed Void Launcher Release** manually, then download `Void-Launcher-v1.2.2-signed-apk`.
+The signed APK workflow reads the keystore and passwords only from GitHub Actions secrets. Required secrets are `VOID_KEYSTORE_B64`, `VOID_KEYSTORE_PASSWORD`, `VOID_KEY_ALIAS`, and `VOID_KEY_PASSWORD`. Run **Build Signed Void Launcher Release** manually, then download `Void-Launcher-v1.3-signed-apk`.
 
 The GitHub workflow builds and signs a debug APK that can be installed for testing. For public releases, create a private signing key and configure release signing. Never commit the keystore or passwords, and retain the same key for all future updates.
 
