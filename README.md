@@ -2,7 +2,7 @@
 
 An original Android HOME launcher with a Pixel-inspired interface and a hidden, launcher-level Private Space.
 
-## Included in v1.4
+## Included in v1.5
 
 - Registers as an Android HOME app and asks to become the default launcher
 - Wallpaper-first Pixel-style home, clock, translucent dock, app search and 4/5-column drawer
@@ -27,7 +27,10 @@ An original Android HOME launcher with a Pixel-inspired interface and a hidden, 
 - Settings includes a one-tap Home workspace reset
 - Clear and reset controls for Private Space
 - Fast PackageManager app discovery, caching, alphabetical sorting and search
-- Long-press actions for dock, Private Space, app info and hiding apps
+- Long-press actions for dock, Home, Private Space, app info, Play Store, sharing, uninstalling and hiding apps
+- Uninstall requests use Android's protected system confirmation screen; system apps may only offer Disable
+- A–Z or Z–A app-drawer sorting
+- Settings controls to reset either dock and unhide every app in Main or Private Space
 - Motion-parallax wallpaper with Reduce Motion control
 - Adjustable wallpaper focal point, zoom, dim strength, blur and motion intensity
 - Four built-in Pixel-style wallpapers that can be applied separately to Main, Private Space or the lock screen
@@ -54,7 +57,7 @@ Open the folder in Android Studio and build `app`.
 
 ### Signed release APK
 
-The signed APK workflow reads the keystore and passwords only from GitHub Actions secrets. Required secrets are `VOID_KEYSTORE_B64`, `VOID_KEYSTORE_PASSWORD`, `VOID_KEY_ALIAS`, and `VOID_KEY_PASSWORD`. Run **Build Signed Void Launcher Release** manually, then download `Void-Launcher-v1.4-signed-apk`.
+The signed APK workflow reads the keystore and passwords only from GitHub Actions secrets. Required secrets are `VOID_KEYSTORE_B64`, `VOID_KEYSTORE_PASSWORD`, `VOID_KEY_ALIAS`, and `VOID_KEY_PASSWORD`. Run **Build Signed Void Launcher Release** manually, then download `Void-Launcher-v1.5-signed-apk`.
 
 The GitHub workflow builds and signs a debug APK that can be installed for testing. For public releases, create a private signing key and configure release signing. Never commit the keystore or passwords, and retain the same key for all future updates.
 

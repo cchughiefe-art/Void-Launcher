@@ -154,7 +154,8 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
             String label = info.loadLabel(getPackageManager()).toString();
             allApps.add(new AppEntry(label, component, info.loadIcon(getPackageManager()), Process.myUserHandle(), false));
         }
-        allApps.sort((a,b) -> a.label.compareToIgnoreCase(b.label));
+        allApps.sort((a,b) -> prefs.getBoolean("sort_descending", false)
+            ? b.label.compareToIgnoreCase(a.label) : a.label.compareToIgnoreCase(b.label));
         if (prefs.getBoolean("cache_apps", true)) { cache.clear(); cache.addAll(allApps); }
         showLoadedApps(new ArrayList<>(allApps), mainSpace);
     }
@@ -375,17 +376,48 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
             boolean inPrivate = prefs.getStringSet("private_allowed", Collections.emptySet()).contains(app.component.flattenToString());
             menu.getMenu().add(inPrivate ? "Remove from Private Space" : "Add to Private Space");
         }
-        menu.getMenu().add("App info"); menu.getMenu().add("Hide app");
+        menu.getMenu().add("App info");
+        menu.getMenu().add("Open in Play Store");
+        menu.getMenu().add("Share app");
+        menu.getMenu().add("Uninstall app");
+        menu.getMenu().add("Hide app");
         menu.setOnMenuItemClickListener(item -> {
             String title = item.getTitle().toString();
             if (title.contains("dock")) toggleSet(profile + "favorites", app.component.flattenToString());
             else if (title.contains("Home")) toggleHome(app.component.flattenToString());
             else if (title.contains("Private Space")) toggleSet("private_allowed", app.component.flattenToString());
             else if (title.equals("Hide app")) toggleSet(profile + "hidden", app.component.flattenToString());
-            else startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    Uri.parse("package:" + app.component.getPackageName())));
+            else if (title.equals("App info")) openAppInfo(app);
+            else if (title.equals("Open in Play Store")) openStore(app);
+            else if (title.equals("Share app")) shareApp(app);
+            else if (title.equals("Uninstall app")) uninstallApp(app);
             safeLoadApps(); return true;
         }); menu.show();
+    }
+
+    private void openAppInfo(AppEntry app) {
+        startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.parse("package:" + app.component.getPackageName())));
+    }
+
+    private void uninstallApp(AppEntry app) {
+        try { startActivity(new Intent(Intent.ACTION_DELETE, Uri.parse("package:" + app.component.getPackageName()))); }
+        catch (Exception error) { Toast.makeText(this, "This app cannot be uninstalled", Toast.LENGTH_SHORT).show(); }
+    }
+
+    private void openStore(AppEntry app) {
+        String packageName = app.component.getPackageName();
+        try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + packageName))); }
+        catch (Exception error) { startActivity(new Intent(Intent.ACTION_VIEW,
+            Uri.parse("https://play.google.com/store/apps/details?id=" + packageName))); }
+    }
+
+    private void shareApp(AppEntry app) {
+        String link = "https://play.google.com/store/apps/details?id=" + app.component.getPackageName();
+        Intent share = new Intent(Intent.ACTION_SEND).setType("text/plain")
+            .putExtra(Intent.EXTRA_SUBJECT, app.label)
+            .putExtra(Intent.EXTRA_TEXT, app.label + "\n" + link);
+        startActivity(Intent.createChooser(share, "Share " + app.label));
     }
 
     private void toggleSet(String key, String value) {

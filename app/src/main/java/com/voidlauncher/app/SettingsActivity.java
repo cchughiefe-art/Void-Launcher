@@ -92,12 +92,17 @@ public final class SettingsActivity extends AppCompatActivity {
         toggle("Cache app list", "Show saved app information immediately", "cache_apps", true);
         toggle("Keep drawer ready", "Keeps the drawer mounted after first opening", "keep_drawer", true);
         toggle("Show app labels", "Display names below icons", "show_labels", true);
+        toggle("Reverse alphabetical order", "Sort the drawer from Z to A instead of A to Z", "sort_descending", false);
         button("Use 4-column grid", v -> setColumns(4));
         button("Use 5-column grid", v -> setColumns(5));
         button("Clear Home screen apps", v -> clearHomeApps());
+        button("Reset Main dock", v -> clearSet("main_favorites", "Main dock reset"));
+        button("Unhide all Main apps", v -> clearSet("main_hidden", "All Main apps are visible"));
 
         section("Private Space");
         button("Clear Private Space app list", v -> clearPrivateApps());
+        button("Reset Private dock", v -> clearSet("private_favorites", "Private dock reset"));
+        button("Unhide all Private apps", v -> clearSet("private_hidden", "All Private apps are visible"));
         button("Reset Private Space", v -> resetPrivateSpace());
 
         section("System");
@@ -214,6 +219,10 @@ public final class SettingsActivity extends AppCompatActivity {
     private void clearHomeApps() {
         prefs.edit().remove("main_home").apply(); MainActivity.clearAppCaches();
         Toast.makeText(this, "Home screen apps cleared", Toast.LENGTH_SHORT).show();
+    }
+    private void clearSet(String key, String message) {
+        prefs.edit().remove(key).apply(); MainActivity.clearAppCaches();
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
     private void resetPrivateSpace() {
         clearDepth("private");
