@@ -1,0 +1,175 @@
+name: Rebuild Void Launcher v2 source
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out current Void repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch Launcher3 foundation
+        run: |
+          git clone --depth 1 --branch 16-dev --recurse-submodules \
+            https://github.com/LawnchairLauncher/lawnchair.git \
+            "$RUNNER_TEMP/void-v2"
+
+      - name: Apply Void Launcher identity and build configuration
+        env:
+          SOURCE: ${{ runner.temp }}/void-v2
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["SOURCE"])
+          gradle = root / "build.gradle"
+          text = gradle.read_text()
+          replacements = {
+              'final def version = "16"': 'final def version = "2"',
+              'final def releaseName = "Beta 1"': 'final def releaseName = "0.0"',
+              'final def versionDisplayName = "${version}.${isReleaseBuild ? releaseName : devReleaseName}"': 'final def versionDisplayName = "${version}.${releaseName}"',
+              'versionCode 16_00_02_01_00': 'versionCode 2_00_00_00',
+              'resValue("string", "derived_app_name", "Lawnchair (Debug)")': 'resValue("string", "derived_app_name", "Void Launcher (Debug)")',
+              'resValue("string", "derived_app_name", "Lawnchair")': 'resValue("string", "derived_app_name", "Void Launcher")',
+              "applicationId 'app.lawnchair'": "applicationId 'com.voidlauncher.app'",
+              'output.outputFileName.set("Lawnchair.${output.versionName.get()}.$channel.${variant.buildType}.apk")': 'output.outputFileName.set("Void-Launcher-${output.versionName.get()}-${channel}-${variant.buildType}.apk")',
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f"Expected build setting missing: {old}")
+              text = text.replace(old, new, 1)
+          gradle.write_text(text)
+
+          config = root / "lawnchair/res/values/config.xml"
+          text = config.read_text()
+          text = text.replace('https://lawnchair.app/live-information.json', '')
+          text = text.replace('<bool name="config_default_enable_nightly_auto_updater">true</bool>', '<bool name="config_default_enable_nightly_auto_updater">false</bool>')
+          text = text.replace('<bool name="config_default_live_information_enabled">true</bool>', '<bool name="config_default_live_information_enabled">false</bool>')
+          text = text.replace('<bool name="config_default_live_information_show_announcements">true</bool>', '<bool name="config_default_live_information_show_announcements">false</bool>')
+          config.write_text(text)
+
+          for strings in (root / "lawnchair/res").glob("values*/strings.xml"):
+              strings.write_text(strings.read_text().replace("Lawnchair", "Void Launcher"))
+          PY
+
+      - name: Add Void launcher icon
+        env:
+          SOURCE: ${{ runner.temp }}/void-v2
+        run: |
+          cat > "$SOURCE/res/drawable/ic_launcher_home.xml" <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/void_icon_background" />
+              <foreground android:drawable="@drawable/ic_void_foreground" />
+              <monochrome android:drawable="@drawable/ic_void_monochrome" />
+          </adaptive-icon>
+          EOF
+          cat > "$SOURCE/res/values/void_brand.xml" <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources><color name="void_icon_background">#09090B</color></resources>
+          EOF
+          cat > "$SOURCE/res/drawable/ic_void_foreground.xml" <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+              <path android:fillColor="#8B5CF6" android:pathData="M54,18a36,36 0,1 0,0 72a36,36 0,1 0,0 -72M54,33a21,21 0,1 1,0 42a21,21 0,1 1,0 -42" />
+              <path android:fillColor="#F7F7FA" android:pathData="M54,43a11,11 0,1 0,0 22a11,11 0,1 0,0 -22" />
+          </vector>
+          EOF
+          cat > "$SOURCE/res/drawable/ic_void_monochrome.xml" <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+              <path android:fillColor="#FFFFFFFF" android:pathData="M54,18a36,36 0,1 0,0 72a36,36 0,1 0,0 -72M54,33a21,21 0,1 1,0 42a21,21 0,1 1,0 -42" />
+          </vector>
+          EOF
+
+      - name: Install Void signed APK workflow
+        env:
+          SOURCE: ${{ runner.temp }}/void-v2
+        run: |
+          mkdir -p "$SOURCE/.github/workflows"
+          cat > "$SOURCE/.github/workflows/build-void-apk.yml" <<'EOF'
+          name: Build signed Void Launcher APK
+          on:
+            workflow_dispatch:
+            push:
+              branches: [ main ]
+          permissions:
+            contents: read
+          jobs:
+            build:
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v4
+                  with:
+                    submodules: recursive
+                - uses: actions/setup-java@v4
+                  with:
+                    distribution: zulu
+                    java-version: '21'
+                - uses: gradle/actions/setup-gradle@v4
+                - name: Restore signing key
+                  env:
+                    VOID_KEYSTORE_B64: __GITHUB_EXPRESSION__ secrets.VOID_KEYSTORE_B64 }}
+                    VOID_KEYSTORE_PASSWORD: __GITHUB_EXPRESSION__ secrets.VOID_KEYSTORE_PASSWORD }}
+                    VOID_KEY_ALIAS: __GITHUB_EXPRESSION__ secrets.VOID_KEY_ALIAS }}
+                    VOID_KEY_PASSWORD: __GITHUB_EXPRESSION__ secrets.VOID_KEY_PASSWORD }}
+                  run: |
+                    test -n "$VOID_KEYSTORE_B64"
+                    test -n "$VOID_KEYSTORE_PASSWORD"
+                    test -n "$VOID_KEY_ALIAS"
+                    test -n "$VOID_KEY_PASSWORD"
+                    printf '%s' "$VOID_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/void-launcher-release.jks"
+                    printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$RUNNER_TEMP/void-launcher-release.jks" "$VOID_KEYSTORE_PASSWORD" "$VOID_KEY_ALIAS" "$VOID_KEY_PASSWORD" > keystore.properties
+                - name: Build signed release APK
+                  run: ./gradlew --no-daemon assembleLawnWithQuickstepGithubRelease
+                - name: Verify APK signature
+                  run: |
+                    "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner" verify --verbose build/outputs/apk/lawnWithQuickstepGithub/release/*.apk
+                - uses: actions/upload-artifact@v4
+                  with:
+                    name: Void-Launcher-v2-signed
+                    path: build/outputs/apk/lawnWithQuickstepGithub/release/*.apk
+                - if: always()
+                  run: rm -f keystore.properties "$RUNNER_TEMP/void-launcher-release.jks"
+          EOF
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          workflow = Path(os.environ["SOURCE"]) / ".github/workflows/build-void-apk.yml"
+          workflow.write_text(workflow.read_text().replace("__GITHUB_EXPRESSION__", chr(36) + "{{"))
+          PY
+
+      - name: Add rebuild notes
+        env:
+          SOURCE: ${{ runner.temp }}/void-v2
+        run: |
+          cat > "$SOURCE/VOID_REBUILD.md" <<'EOF'
+          # Void Launcher 2.0
+
+          Void Launcher 2.0 is rebuilt on Android Launcher3 and Lawnchair 16 under their Apache 2.0 licenses.
+
+          The application ID remains `com.voidlauncher.app` for update compatibility. Android 15+ system Private Space, widgets, workspace pages, folders, drag and drop, shortcuts, notification dots, icon packs, search, backup and profile-aware app loading are provided by the production launcher foundation.
+
+          Run **Build signed Void Launcher APK** in GitHub Actions to create the signed APK using the existing Void repository secrets.
+          EOF
+
+      - name: Replace old prototype and push rebuilt source
+        env:
+          SOURCE: ${{ runner.temp }}/void-v2
+        run: |
+          find "$SOURCE" -name .git -type d -prune -exec rm -rf {} +
+          find "$SOURCE" -name .git -type f -delete
+          rsync -a --delete --exclude='.git/' "$SOURCE/" "$GITHUB_WORKSPACE/"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Rebuild Void Launcher v2 on Launcher3 foundation"
+          git push origin HEAD:main
