@@ -1,4 +1,4 @@
-name: Build Signed Void Launcher Release
+name: Build Signed Void Launcher v2 APK
 
 on:
   workflow_dispatch:
@@ -7,52 +7,57 @@ permissions:
   contents: read
 
 jobs:
-  release:
+  build-signed-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
     steps:
-      - name: Check out project
-        uses: actions/checkout@v4
-
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
+      - name: Check out Void Launcher
+        uses: actions/checkout@v7
         with:
-          distribution: temurin
-          java-version: '17'
+          submodules: recursive
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: zulu
+          java-version: '21'
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
+        uses: gradle/actions/setup-gradle@v6
 
-      - name: Restore private signing key
+      - name: Restore Void signing key
         env:
           VOID_KEYSTORE_B64: ${{ secrets.VOID_KEYSTORE_B64 }}
-        run: |
-          test -n "$VOID_KEYSTORE_B64"
-          printf '%s' "$VOID_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/void-launcher-release.jks"
-
-      - name: Build signed release APK
-        env:
-          VOID_KEYSTORE_PATH: ${{ runner.temp }}/void-launcher-release.jks
           VOID_KEYSTORE_PASSWORD: ${{ secrets.VOID_KEYSTORE_PASSWORD }}
           VOID_KEY_ALIAS: ${{ secrets.VOID_KEY_ALIAS }}
           VOID_KEY_PASSWORD: ${{ secrets.VOID_KEY_PASSWORD }}
-        run: gradle --no-daemon :app:assembleRelease
+        run: |
+          test -n "$VOID_KEYSTORE_B64"
+          test -n "$VOID_KEYSTORE_PASSWORD"
+          test -n "$VOID_KEY_ALIAS"
+          test -n "$VOID_KEY_PASSWORD"
+          printf '%s' "$VOID_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/void-launcher-release.jks"
+          {
+            printf 'storeFile=%s\n' "$RUNNER_TEMP/void-launcher-release.jks"
+            printf 'storePassword=%s\n' "$VOID_KEYSTORE_PASSWORD"
+            printf 'keyAlias=%s\n' "$VOID_KEY_ALIAS"
+            printf 'keyPassword=%s\n' "$VOID_KEY_PASSWORD"
+          } > keystore.properties
+
+      - name: Build signed release APK
+        run: ./gradlew --no-daemon assembleLawnWithQuickstepGithubRelease
 
       - name: Verify APK signature
         run: |
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
-          cp app/build/outputs/apk/release/app-release.apk Void-Launcher-v1.7-release.apk
+          APKSIGNER="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner"
+          "$APKSIGNER" verify --verbose build/outputs/apk/lawnWithQuickstepGithub/release/*.apk
 
-      - name: Upload signed release APK
-        uses: actions/upload-artifact@v4
+      - name: Upload signed APK
+        uses: actions/upload-artifact@v7
         with:
-          name: Void-Launcher-v1.7-signed-apk
-          path: Void-Launcher-v1.7-release.apk
+          name: Void-Launcher-v2-signed
+          path: build/outputs/apk/lawnWithQuickstepGithub/release/*.apk
           if-no-files-found: error
-          retention-days: 30
 
-      - name: Remove signing key
+      - name: Remove signing material
         if: always()
-        run: rm -f "$RUNNER_TEMP/void-launcher-release.jks"
+        run: rm -f keystore.properties "$RUNNER_TEMP/void-launcher-release.jks"
