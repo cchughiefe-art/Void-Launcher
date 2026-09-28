@@ -1,79 +1,112 @@
-# Void Launcher
+# Lawnchair 16
 
-An original Android HOME launcher with a Pixel-inspired interface and a hidden, launcher-level Private Space.
+[![Build debug APK](https://github.com/LawnchairLauncher/lawnchair/actions/workflows/ci.yml/badge.svg)](https://github.com/LawnchairLauncher/lawnchair/actions/workflows/ci.yml)
+[![Build release APK](https://github.com/LawnchairLauncher/lawnchair/actions/workflows/release_update.yml/badge.svg)](https://github.com/LawnchairLauncher/lawnchair/actions/workflows/release_update.yml)
+[![Crowdin](https://badges.crowdin.net/e/188ba69d884418987f0b7f1dd55e3a4e/localized.svg)](https://lawnchair.crowdin.com/lawnchair)
+[![OpenCollective](https://img.shields.io/opencollective/all/lawnchair?label=financial%20contributors&logo=open-collective)](https://opencollective.com/lawnchair)
+[![Telegram](https://img.shields.io/endpoint?url=https%3A%2F%2Ftg.sumanjay.workers.dev%2Flccommunity)](https://t.me/lccommunity)
+[![Discord](https://img.shields.io/discord/803299970169700402?label=server&logo=discord)](https://discord.gg/3x8qNWxgGZ)
+[![GitHub Downloads](https://img.shields.io/github/downloads/LawnchairLauncher/lawnchair/total.svg?label=GitHub%20Downloads&logo=github)](https://github.com/LawnchairLauncher/lawnchair/releases)
+[![Play Store Installs](https://img.shields.io/endpoint?color=green&logo=googleplay&logoColor=green&url=https%3A%2F%2Fplay.cuzi.workers.dev%2Fplay%3Fi%3Dapp.lawnchair.play%26l%3DPlay%2520Store%2520Installs%26m%3D%24shortinstalls)](https://play.google.com/store/apps/details?id=app.lawnchair.play)
 
-## Included in v1.7
+<picture>
+    <!-- Avoid image being clickable with slight workaround -->
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/device-frame-dark.webp" width="250px">
+    <img alt="Smartphone home screen shown in day and night themes, featuring Android Material You dynamic color styling across the wallpaper, clock widget, and app icons." src="docs/assets/device-frame-light.webp" width="250px">
+</picture>
 
-- Registers as an Android HOME app and asks to become the default launcher
-- Wallpaper-first Pixel-style home, clock, translucent dock, app search and 4/5-column drawer
-- Swipe up from the bottom to open the complete Main app drawer
-- Swipe inward from either screen edge to open the hidden Private Space
-- Private Space has its own app allowlist, dock favorites, hidden apps and wallpaper
-- Add or remove apps from Private Space by long-pressing them in the Main drawer
-- Fingerprint lock before entering Private Space, Private Browser or Private Gallery
-- Private Gallery for imported images, videos and documents
-- Private Browser downloads save only to Void's app-internal private storage
-- Private Browser keeps no persistent history, cache or cookies
-- Automatic return to Main whenever Void loses focus, when enabled
-- Screenshots are allowed throughout the launcher
-- Easier short swipe-up gesture opens the app drawer from the lower half of the home screen
-- Pulling down at the top of the app drawer returns to the home screen
-- Full-width edge-to-edge home wallpaper with corrected system-bar spacing
-- Opaque Pixel-style app drawer with a pull handle, safer bottom inset and smooth open/close motion
-- Dark rounded Settings cards replace the default grey Android buttons
-- Unfinished placeholder controls removed from Settings
-- Home workspace supports up to 16 pinned apps with labels and long-press actions
-- Long-press a Main drawer app to add or remove it from the Home screen
-- Settings includes a one-tap Home workspace reset
-- Clear and reset controls for Private Space
-- Fast PackageManager app discovery, caching, alphabetical sorting and search
-- Long-press actions for dock, Home, Private Space, app info, Play Store, sharing, uninstalling and hiding apps
-- Uninstall requests use Android's protected system confirmation screen; system apps may only offer Disable
-- A–Z or Z–A app-drawer sorting
-- Settings controls to reset either dock and unhide every app in Main or Private Space
-- Ordered Home workspace: icon positions remain where the user leaves them
-- Long-press and drag Home icons to rearrange them, with an optional layout lock
-- Create, rename, populate, open and delete Home folders with four-icon previews
-- Configurable Home grid, Home icon size, app-drawer icon size and 4–6 app dock capacity
-- Ordered Main and Private dock storage instead of unordered favourites
-- Native app-provided shortcuts in the long-press menu when Void is the default launcher
-- Automatic Home and drawer refresh after apps are installed, removed or updated
-- Landscape, tablet and foldable resizing is no longer artificially blocked
-- Rebuilt Pixel-style Home hierarchy with a compact At a Glance area and more usable workspace
-- Floating icon dock and integrated bottom search pill replace the stacked prototype panels
-- Rounded opaque app-drawer surface with a dedicated search field and clear All Apps/Private Space identity
-- Proper vector search, settings and Private Space icons replace emoji controls
-- Compact dark Settings rows, consistent corner radii and quieter visual spacing
-- Motion-parallax wallpaper with Reduce Motion control
-- Adjustable wallpaper focal point, zoom, dim strength, blur and motion intensity
-- Four built-in Pixel-style wallpapers that can be applied separately to Main, Private Space or the lock screen
-- On-device subject segmentation creates a transparent foreground layer for people, pets and objects
-- Depth wallpaper places the home clock behind the detected subject and moves both layers together with parallax
-- Automatic depth generation after choosing a wallpaper, plus manual rebuild controls
-- Separate Main and Private Space wallpapers plus an optional lock-screen wallpaper setter
-- No Work Profile setup, launcher PIN or storage permission prompt
-- No analytics or advertising
-- Environment-based release signing with a separate GitHub Actions signed-release workflow
+Lawnchair is a free, open-source home app for Android. Taking Launcher3—Android’s default home app—as a starting point, it ports Pixel Launcher features and introduces rich customization options.
 
-Private Space is a fingerprint-gated launcher area with app-internal file storage, not a separate encrypted Android user/profile. Android Settings, notifications, Recents, deep links and other apps may still reveal installed apps or activity. Use Android's system Private Space when strong OS-level isolation is required.
+This branch houses the codebase of Lawnchair 16, which is currently in development and is based on Launcher3 from Android 16. For Lawnchair 9 to 15, see the branches with the `9-` to `15-` prefixes, respectively.
 
-## Build
+## Features
 
-Open the folder in Android Studio and build `app`.
+- Material 3 Expressive theming that follows your wallpaper and system colors.
+- At a Glance widget support, with integration for [Smartspacer](https://github.com/KieronQuinn/Smartspacer).
+- QuickSwitch support for Android Recents integration on Android 15-16 (root required).
+- Global search for apps, contacts, and web results from the home screen.
+- Customization options for icon packs, fonts, and color settings.
 
-### Build on GitHub from an Android phone
+## Download
 
-1. Push this project, including `.github`, to the repository.
-2. Open the repository's **Actions** tab.
-3. Select **Build Void Launcher APK**, then tap **Run workflow**.
-4. Download the debug test artifact when the run finishes.
+<p align="left">
+  <a href="https://play.google.com/store/apps/details?id=app.lawnchair.play">
+    <picture>
+      <!-- Avoid image being clickable with slight workaround -->
+      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/badge-google-play.webp" height="60">
+      <img alt="Get it on Google Play" src="docs/assets/badge-google-play.webp" height="60">
+    </picture>
+  </a>
+  <a href="https://apt.izzysoft.de/fdroid/index/apk/app.lawnchair">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/badge-izzyondroid.webp" height="60">
+      <img alt="Get it on IzzyOnDroid" src="docs/assets/badge-izzyondroid.webp" height="60">
+    </picture>
+  </a>
+  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/LawnchairLauncher/lawnchair/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/badge-obtainium.webp" height="60">
+      <img alt="Get it on Obtainium" src="docs/assets/badge-obtainium.webp" height="60">
+    </picture>
+  </a>
+    <a href="https://github.com/LawnchairLauncher/lawnchair/releases">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/badge-github.webp" height="60">
+      <img alt="Get it on GitHub" src="docs/assets/badge-github.webp" height="60">
+    </picture>
+  </a>
+</p>
 
-### Signed release APK
+Lawnchair on Play Store will install as a different app compared to other sources. Features may be restricted to comply with Google Play’s publishing rules.
 
-The signed APK workflow reads the keystore and passwords only from GitHub Actions secrets. Required secrets are `VOID_KEYSTORE_B64`, `VOID_KEYSTORE_PASSWORD`, `VOID_KEY_ALIAS`, and `VOID_KEY_PASSWORD`. Run **Build Signed Void Launcher Release** manually, then download `Void-Launcher-v1.7-signed-apk`.
+You can also [verify your installation](https://docs.lawnchair.app/getting-started/install-and-setup/verify) to check if you have installed an official build.
 
-The GitHub workflow builds and signs a debug APK that can be installed for testing. For public releases, create a private signing key and configure release signing. Never commit the keystore or passwords, and retain the same key for all future updates.
+### Development builds
 
-## Next milestones
+Interested in keeping yourself up-to-date with every Lawnchair development? Try our development builds!
 
-Workspace pages, widgets, notification dots, icon packs, backup/restore and an encrypted local vault.
+These builds offer the latest features and bug fixes at a cost of performance and additional issues. Make backups before installing.
+
+Download: [Obtainium][Obtainium link] • [GitHub][GitHub link] • [nightly.link][Nightly link]
+
+## Sponsors
+
+<p align="left">
+  <a href="https://coderabbit.link/lawnchair">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/sponsor-coderabbit-dark.svg" width="300">
+      <img alt="CodeRabbit" src="docs/assets/sponsor-coderabbit-light.svg" width="300">
+    </picture>
+  </a>
+</p>
+
+[CodeRabbit](https://coderabbit.link/lawnchair) is an AI-powered code review platform that integrates directly into pull-request workflows and IDEs, examining code changes in context and suggesting improvements.
+
+## Support Lawnchair
+
+If you love what we do, consider [supporting us on Open Collective](https://opencollective.com/lawnchair)! Your contributions help keep Lawnchair independent and enable us to develop faster.
+
+A huge thank you to our Core Backers ($5+):
+*(These backers directly fund our Project Velocity Fund)*
+
+[![Core Backers](https://opencollective.com/lawnchair/tiers/backer.svg?avatarHeight=64&width=890&button=false)](https://opencollective.com/lawnchair)
+
+[Become a supporter](https://opencollective.com/lawnchair) to help us cover our operational costs, or become a Core Backer to be featured here!
+
+## Contribute
+
+Visit the [Lawnchair contributing guidelines](CONTRIBUTING.md) for information and tips on contributing to Lawnchair.
+
+## Quick links
+
+- [Website](https://lawnchair.app)
+- [Documentation](https://docs.lawnchair.app/)
+- [News on Telegram](https://t.me/lawnchairci)
+- [Discord](https://discord.com/invite/3x8qNWxgGZ)
+- [X (formerly Twitter)](https://x.com/lawnchairapp)
+- [_XDA_ thread](https://xdaforums.com/t/lawnchair-customizable-pixel-launcher.3627137/)
+
+<!-- Download links -->
+[Nightly link]: https://nightly.link/LawnchairLauncher/lawnchair/workflows/ci/16-dev
+[Obtainium link]: https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22app.lawnchair.nightly%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Flawnchairlauncher%2Flawnchair%22%2C%22author%22%3A%22Lawnchair%20Launcher%22%2C%22name%22%3A%22Lawnchair%20(Debug)%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Atrue%2C%5C%22fallbackToOlderReleases%5C%22%3Afalse%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22Lawnchair%20Nightly%5C%22%2C%5C%22filterReleaseNotesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22verifyLatestTag%5C%22%3Afalse%2C%5C%22dontSortReleasesList%5C%22%3Afalse%2C%5C%22useLatestAssetDateAsReleaseDate%5C%22%3Afalse%2C%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%5C%22%2C%5C%22versionDetection%5C%22%3Afalse%2C%5C%22releaseDateAsVersion%5C%22%3Atrue%2C%5C%22useVersionCodeAsOSVersion%5C%22%3Afalse%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22%5C%22%2C%5C%22shizukuPretendToBeGooglePlay%5C%22%3Afalse%2C%5C%22exemptFromBackgroundUpdates%5C%22%3Afalse%2C%5C%22skipUpdateNotifications%5C%22%3Afalse%2C%5C%22about%5C%22%3A%5C%22Lawnchair%20is%20a%20free%2C%20open-source%20home%20app%20for%20Android.%20(NOTE%3A%20This%20is%20the%20debug%20version%20of%20Lawnchair%2C%20for%20the%20beta%2Fstable%20versions%20see%20%5C%5C%5C%22Lawnchair%5C%5C%5C%22)%5C%22%7D%22%7D
+[GitHub link]: https://github.com/LawnchairLauncher/lawnchair/releases/tag/nightly

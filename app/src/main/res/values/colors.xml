@@ -1,7 +1,0 @@
-<resources>
-    <color name="void_black">#09090B</color>
-    <color name="void_panel">#D91A1A1F</color>
-    <color name="void_white">#F7F7FA</color>
-    <color name="void_muted">#A5A5B0</color>
-    <color name="void_accent">#8B5CF6</color>
-</resources>
