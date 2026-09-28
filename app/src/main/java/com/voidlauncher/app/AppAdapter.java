@@ -15,9 +15,11 @@ final class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
     private final List<AppEntry> shown = new ArrayList<>();
     private final Listener listener;
     private boolean showLabels = true;
+    private int iconSizeDp = 56;
 
     AppAdapter(Listener listener) { this.listener = listener; }
     void setShowLabels(boolean value) { showLabels = value; notifyDataSetChanged(); }
+    void setIconSize(int value) { iconSizeDp = value; notifyDataSetChanged(); }
 
     void submit(List<AppEntry> apps) {
         shown.clear(); shown.addAll(apps); notifyDataSetChanged();
@@ -31,6 +33,8 @@ final class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
     @Override public void onBindViewHolder(@NonNull Holder h, int pos) {
         AppEntry app = shown.get(pos);
         h.label.setText(app.label); h.label.setVisibility(showLabels ? View.VISIBLE : View.GONE); h.icon.setImageDrawable(app.icon);
+        int px = (int)(iconSizeDp * h.itemView.getResources().getDisplayMetrics().density);
+        ViewGroup.LayoutParams params = h.icon.getLayoutParams(); params.width = px; params.height = px; h.icon.setLayoutParams(params);
         h.itemView.setOnClickListener(v -> listener.open(app));
         h.itemView.setOnLongClickListener(v -> { listener.menu(app, v); return true; });
     }

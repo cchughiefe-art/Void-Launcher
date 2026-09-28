@@ -79,6 +79,18 @@ public final class SettingsActivity extends AppCompatActivity {
         button("Motion: balanced", v -> setInt("parallax_strength", 18, "Balanced wallpaper motion"));
         button("Motion: strong", v -> setInt("parallax_strength", 28, "Strong wallpaper motion"));
 
+        section("Home screen");
+        toggle("Lock Home layout", "Prevents accidental dragging, removal and folder changes", "lock_layout", false);
+        toggle("Show Home labels", "Display app and folder names on the Home screen", "show_home_labels", true);
+        button("Home grid: 4 columns", v -> setInt("home_columns", 4, "Home grid set to 4 columns"));
+        button("Home grid: 5 columns", v -> setInt("home_columns", 5, "Home grid set to 5 columns"));
+        button("Home icons: compact", v -> setInt("home_icon_size", 48, "Compact Home icons selected"));
+        button("Home icons: standard", v -> setInt("home_icon_size", 56, "Standard Home icons selected"));
+        button("Home icons: large", v -> setInt("home_icon_size", 64, "Large Home icons selected"));
+        button("Dock: 4 apps", v -> setInt("dock_size", 4, "Dock capacity set to 4"));
+        button("Dock: 5 apps", v -> setInt("dock_size", 5, "Dock capacity set to 5"));
+        button("Dock: 6 apps", v -> setInt("dock_size", 6, "Dock capacity set to 6"));
+
         section("Unlock and privacy");
         button("Open Void Private Browser", v -> startActivity(new Intent(this, PrivateBrowserActivity.class)));
         button("Open Private Gallery", v -> startActivity(new Intent(this, PrivateGalleryActivity.class)));
@@ -95,13 +107,16 @@ public final class SettingsActivity extends AppCompatActivity {
         toggle("Reverse alphabetical order", "Sort the drawer from Z to A instead of A to Z", "sort_descending", false);
         button("Use 4-column grid", v -> setColumns(4));
         button("Use 5-column grid", v -> setColumns(5));
+        button("Drawer icons: compact", v -> setInt("drawer_icon_size", 48, "Compact drawer icons selected"));
+        button("Drawer icons: standard", v -> setInt("drawer_icon_size", 56, "Standard drawer icons selected"));
+        button("Drawer icons: large", v -> setInt("drawer_icon_size", 64, "Large drawer icons selected"));
         button("Clear Home screen apps", v -> clearHomeApps());
-        button("Reset Main dock", v -> clearSet("main_favorites", "Main dock reset"));
+        button("Reset Main dock", v -> clearDock("main_", "Main dock reset"));
         button("Unhide all Main apps", v -> clearSet("main_hidden", "All Main apps are visible"));
 
         section("Private Space");
         button("Clear Private Space app list", v -> clearPrivateApps());
-        button("Reset Private dock", v -> clearSet("private_favorites", "Private dock reset"));
+        button("Reset Private dock", v -> clearDock("private_", "Private dock reset"));
         button("Unhide all Private apps", v -> clearSet("private_hidden", "All Private apps are visible"));
         button("Reset Private Space", v -> resetPrivateSpace());
 
@@ -217,8 +232,14 @@ public final class SettingsActivity extends AppCompatActivity {
         Toast.makeText(this, "Private Space app list cleared", Toast.LENGTH_SHORT).show();
     }
     private void clearHomeApps() {
-        prefs.edit().remove("main_home").apply(); MainActivity.clearAppCaches();
+        SharedPreferences.Editor editor = prefs.edit().remove("main_home").remove("main_home_order");
+        for (String key : prefs.getAll().keySet()) if (key.startsWith("folder_")) editor.remove(key);
+        editor.apply(); MainActivity.clearAppCaches();
         Toast.makeText(this, "Home screen apps cleared", Toast.LENGTH_SHORT).show();
+    }
+    private void clearDock(String profile, String message) {
+        prefs.edit().remove(profile + "favorites").remove(profile + "dock_order").apply(); MainActivity.clearAppCaches();
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
     private void clearSet(String key, String message) {
         prefs.edit().remove(key).apply(); MainActivity.clearAppCaches();
@@ -227,7 +248,7 @@ public final class SettingsActivity extends AppCompatActivity {
     private void resetPrivateSpace() {
         clearDepth("private");
         prefs.edit().remove("private_allowed").remove("private_initialized").remove("private_favorites")
-            .remove("private_hidden").remove("private_wallpaper").apply();
+            .remove("private_dock_order").remove("private_hidden").remove("private_wallpaper").apply();
         MainActivity.clearAppCaches();
         Toast.makeText(this, "Private Space reset", Toast.LENGTH_SHORT).show();
     }
