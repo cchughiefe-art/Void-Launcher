@@ -13,13 +13,12 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
-import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SwitchCompat;
 
 public final class SettingsActivity extends AppCompatActivity {
     private SharedPreferences prefs;
@@ -36,11 +35,11 @@ public final class SettingsActivity extends AppCompatActivity {
         scroll.setBackgroundColor(Color.rgb(15, 15, 18));
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(18), dp(54), dp(18), dp(64));
+        content.setPadding(dp(20), dp(52), dp(20), dp(64));
         scroll.addView(content);
         setContentView(scroll);
 
-        TextView title = text("Void settings", 30, Color.WHITE);
+        TextView title = text("Void settings", 28, Color.WHITE);
         title.setTypeface(null, android.graphics.Typeface.BOLD);
         content.addView(title);
         content.addView(text("Pixel-style controls for Main and Private Space", 14, 0xffaaaab5));
@@ -203,24 +202,24 @@ public final class SettingsActivity extends AppCompatActivity {
         view.setPadding(0, dp(26), 0, dp(8)); content.addView(view);
     }
     private void toggle(String title, String summary, String key, boolean fallback) {
-        Switch control = new Switch(this);
+        SwitchCompat control = new SwitchCompat(this);
         control.setText(title + "\n" + summary); control.setTextColor(Color.WHITE); control.setTextSize(15);
-        control.setPadding(dp(14), dp(12), dp(12), dp(12)); control.setMinHeight(dp(72));
-        GradientDrawable background = new GradientDrawable(); background.setColor(0xff17151c); background.setCornerRadius(dp(18));
+        control.setPadding(dp(16), dp(10), dp(14), dp(10)); control.setMinHeight(dp(66));
+        GradientDrawable background = new GradientDrawable(); background.setColor(0xff1b191f); background.setCornerRadius(dp(20));
+        background.setStroke(dp(1), 0xff2b2831);
         control.setBackground(background); control.setChecked(prefs.getBoolean(key, fallback));
         control.setOnCheckedChangeListener((v, checked) -> { prefs.edit().putBoolean(key, checked).apply(); MainActivity.clearAppCaches(); });
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2); params.setMargins(0, dp(4), 0, dp(4));
         content.addView(control, params);
     }
     private void button(String label, View.OnClickListener action) {
-        Button button = new Button(this); button.setText(label); button.setAllCaps(false); button.setTextColor(Color.WHITE);
-        button.setTextSize(15); button.setMinHeight(dp(56)); button.setPadding(dp(16), dp(10), dp(16), dp(10));
-        GradientDrawable card = new GradientDrawable(); card.setColor(0xff24212b); card.setCornerRadius(dp(18));
-        card.setStroke(dp(1), 0xff3a3544);
-        button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x337c4dff), card, null));
-        button.setOnClickListener(action);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(58)); params.setMargins(0, dp(4), 0, dp(4));
-        content.addView(button, params);
+        TextView row = text(label + "   ›", 15, Color.WHITE); row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(17), 0, dp(17), 0);
+        GradientDrawable card = new GradientDrawable(); card.setColor(0xff1b191f); card.setCornerRadius(dp(20));
+        card.setStroke(dp(1), 0xff2b2831);
+        row.setBackground(new RippleDrawable(ColorStateList.valueOf(0x337c4dff), card, null)); row.setOnClickListener(action);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(52)); params.setMargins(0, dp(3), 0, dp(3));
+        content.addView(row, params);
     }
     private void setColumns(int columns) {
         prefs.edit().putInt("columns", columns).apply();

@@ -31,12 +31,12 @@ jobs:
         run: gradle --no-daemon :app:assembleDebug
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Void-Launcher-v1.6-test.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk Void-Launcher-v1.7-test.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Void-Launcher-v1.6-test
-          path: Void-Launcher-v1.6-test.apk
+          name: Void-Launcher-v1.7-test
+          path: Void-Launcher-v1.7-test.apk
           if-no-files-found: error
           retention-days: 30

@@ -2,7 +2,7 @@
 
 An original Android HOME launcher with a Pixel-inspired interface and a hidden, launcher-level Private Space.
 
-## Included in v1.6
+## Included in v1.7
 
 - Registers as an Android HOME app and asks to become the default launcher
 - Wallpaper-first Pixel-style home, clock, translucent dock, app search and 4/5-column drawer
@@ -39,6 +39,11 @@ An original Android HOME launcher with a Pixel-inspired interface and a hidden, 
 - Native app-provided shortcuts in the long-press menu when Void is the default launcher
 - Automatic Home and drawer refresh after apps are installed, removed or updated
 - Landscape, tablet and foldable resizing is no longer artificially blocked
+- Rebuilt Pixel-style Home hierarchy with a compact At a Glance area and more usable workspace
+- Floating icon dock and integrated bottom search pill replace the stacked prototype panels
+- Rounded opaque app-drawer surface with a dedicated search field and clear All Apps/Private Space identity
+- Proper vector search, settings and Private Space icons replace emoji controls
+- Compact dark Settings rows, consistent corner radii and quieter visual spacing
 - Motion-parallax wallpaper with Reduce Motion control
 - Adjustable wallpaper focal point, zoom, dim strength, blur and motion intensity
 - Four built-in Pixel-style wallpapers that can be applied separately to Main, Private Space or the lock screen
@@ -65,7 +70,7 @@ Open the folder in Android Studio and build `app`.
 
 ### Signed release APK
 
-The signed APK workflow reads the keystore and passwords only from GitHub Actions secrets. Required secrets are `VOID_KEYSTORE_B64`, `VOID_KEYSTORE_PASSWORD`, `VOID_KEY_ALIAS`, and `VOID_KEY_PASSWORD`. Run **Build Signed Void Launcher Release** manually, then download `Void-Launcher-v1.6-signed-apk`.
+The signed APK workflow reads the keystore and passwords only from GitHub Actions secrets. Required secrets are `VOID_KEYSTORE_B64`, `VOID_KEYSTORE_PASSWORD`, `VOID_KEY_ALIAS`, and `VOID_KEY_PASSWORD`. Run **Build Signed Void Launcher Release** manually, then download `Void-Launcher-v1.7-signed-apk`.
 
 The GitHub workflow builds and signs a debug APK that can be installed for testing. For public releases, create a private signing key and configure release signing. Never commit the keystore or passwords, and retain the same key for all future updates.
 

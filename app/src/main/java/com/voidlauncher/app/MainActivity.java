@@ -23,6 +23,7 @@ import android.view.MotionEvent;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.Toast;
@@ -308,9 +309,11 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
 
     private void updateUtilityButton(boolean mainSpace) {
         settingsButton.setVisibility(View.VISIBLE);
-        android.widget.TextView button = (android.widget.TextView) settingsButton;
-        button.setText(mainSpace ? "⚙" : "◉");
+        ImageButton button = (ImageButton) settingsButton;
+        button.setImageResource(mainSpace ? R.drawable.ic_settings : R.drawable.ic_private);
         button.setContentDescription(mainSpace ? "Void settings" : "Open Private Browser");
+        android.widget.TextView title = findViewById(R.id.drawerTitle);
+        title.setText(mainSpace ? "All apps" : "Private Space");
     }
 
     private void filter(String value) {
