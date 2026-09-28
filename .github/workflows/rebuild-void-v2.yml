@@ -167,7 +167,8 @@ jobs:
         run: |
           find "$SOURCE" -name .git -type d -prune -exec rm -rf {} +
           find "$SOURCE" -name .git -type f -delete
-          rsync -a --delete --exclude='.git/' "$SOURCE/" "$GITHUB_WORKSPACE/"
+          # Workflows are preserved and updated through the authenticated GitHub session.
+          rsync -a --delete --exclude='.git/' --exclude='.github/workflows/' "$SOURCE/" "$GITHUB_WORKSPACE/"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
