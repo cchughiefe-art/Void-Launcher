@@ -40,6 +40,7 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
     private static final List<AppEntry> PRIVATE_SPACE_CACHE = new ArrayList<>();
     static void clearAppCaches() { PRIVATE_CACHE.clear(); PRIVATE_SPACE_CACHE.clear(); }
     private AppAdapter adapter;
+    private AppAdapter homeAdapter;
     private View drawer;
     private EditText search;
     private LinearLayout dock;
@@ -74,28 +75,15 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
         grid.setLayoutManager(new GridLayoutManager(this, prefs.getInt("columns", 4)));
         adapter = new AppAdapter(this);
         grid.setAdapter(adapter);
+        RecyclerView homeGrid = findViewById(R.id.homeApps);
+        homeGrid.setLayoutManager(new GridLayoutManager(this, 4));
+        homeAdapter = new AppAdapter(this);
+        homeGrid.setAdapter(homeAdapter);
 
         findViewById(R.id.openDrawer).setOnClickListener(v -> { activeProfile = Space.MAIN; safeLoadApps(); showDrawer(); });
         settingsButton.setOnClickListener(v -> handleUtilityButton());
-        findViewById(R.id.homeScreen).setOnTouchListener((v, event) -> {
-            if (event.getAction() == MotionEvent.ACTION_DOWN) { touchDownY = event.getY(); touchDownX = event.getX(); gesturePointers = 1; }
-            if (event.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN) gesturePointers = Math.max(gesturePointers, event.getPointerCount());
-            if (event.getAction() == MotionEvent.ACTION_UP) {
-                float density = getResources().getDisplayMetrics().density;
-                float dx = event.getX() - touchDownX, dy = event.getY() - touchDownY;
-                float edge = 42 * density, horizontal = 64 * density, vertical = 48 * density;
-                boolean leftEdge = touchDownX <= edge && dx >= horizontal;
-                boolean rightEdge = touchDownX >= v.getWidth() - edge && dx <= -horizontal;
-                if ((leftEdge || rightEdge) && prefs.getBoolean("edge_private_swipe", true)) {
-                    openPrivateSpace(); return true;
-                }
-                boolean fromBottom = touchDownY >= v.getHeight() * 0.55f;
-                if (fromBottom && dy <= -vertical && prefs.getBoolean("bottom_drawer_swipe", true)) {
-                    activeProfile = Space.MAIN; safeLoadApps(); showDrawer(); return true;
-                }
-            }
-            return true;
-        });
+        findViewById(R.id.homeScreen).setOnTouchListener(this::handleHomeGesture);
+        homeGrid.setOnTouchListener(this::handleHomeGesture);
         grid.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN) drawerTouchY = event.getY();
             if (event.getAction() == MotionEvent.ACTION_UP) {
@@ -188,6 +176,31 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
         updateUtilityButton(mainSpace);
         applyAppearance(mainSpace);
         buildDock();
+        if (mainSpace) buildHomeApps();
+    }
+
+    private boolean handleHomeGesture(View view, MotionEvent event) {
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            touchDownY = event.getRawY(); touchDownX = event.getRawX(); gesturePointers = 1;
+        }
+        if (event.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN)
+            gesturePointers = Math.max(gesturePointers, event.getPointerCount());
+        if (event.getAction() == MotionEvent.ACTION_UP) {
+            float density = getResources().getDisplayMetrics().density;
+            float width = getResources().getDisplayMetrics().widthPixels;
+            float height = getResources().getDisplayMetrics().heightPixels;
+            float dx = event.getRawX() - touchDownX, dy = event.getRawY() - touchDownY;
+            float edge = 42 * density, horizontal = 64 * density, vertical = 48 * density;
+            boolean leftEdge = touchDownX <= edge && dx >= horizontal;
+            boolean rightEdge = touchDownX >= width - edge && dx <= -horizontal;
+            if ((leftEdge || rightEdge) && prefs.getBoolean("edge_private_swipe", true)) {
+                openPrivateSpace(); return true;
+            }
+            if (touchDownY >= height * 0.55f && dy <= -vertical && prefs.getBoolean("bottom_drawer_swipe", true)) {
+                activeProfile = Space.MAIN; safeLoadApps(); showDrawer(); return true;
+            }
+        }
+        return view.getId() != R.id.homeApps;
     }
 
     private void applyAppearance(boolean mainSpace) {
@@ -299,6 +312,14 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
         }
     }
 
+    private void buildHomeApps() {
+        Set<String> selected = prefs.getStringSet("main_home", Collections.emptySet());
+        List<AppEntry> chosen = new ArrayList<>();
+        for (AppEntry app : allApps) if (selected.contains(app.component.flattenToString())) chosen.add(app);
+        homeAdapter.setShowLabels(prefs.getBoolean("show_labels", true));
+        homeAdapter.submit(chosen.subList(0, Math.min(16, chosen.size())));
+    }
+
     @Override public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() != Sensor.TYPE_ROTATION_VECTOR || wallpaper == null) return;
         float[] rotation = new float[9], orientation = new float[3];
@@ -349,6 +370,8 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
         boolean favorite = prefs.getStringSet(profile + "favorites", Collections.emptySet()).contains(app.component.flattenToString());
         menu.getMenu().add(favorite ? "Remove from dock" : "Add to dock");
         if (activeProfile == Space.MAIN) {
+            boolean onHome = prefs.getStringSet("main_home", Collections.emptySet()).contains(app.component.flattenToString());
+            menu.getMenu().add(onHome ? "Remove from Home" : "Add to Home");
             boolean inPrivate = prefs.getStringSet("private_allowed", Collections.emptySet()).contains(app.component.flattenToString());
             menu.getMenu().add(inPrivate ? "Remove from Private Space" : "Add to Private Space");
         }
@@ -356,6 +379,7 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
         menu.setOnMenuItemClickListener(item -> {
             String title = item.getTitle().toString();
             if (title.contains("dock")) toggleSet(profile + "favorites", app.component.flattenToString());
+            else if (title.contains("Home")) toggleHome(app.component.flattenToString());
             else if (title.contains("Private Space")) toggleSet("private_allowed", app.component.flattenToString());
             else if (title.equals("Hide app")) toggleSet(profile + "hidden", app.component.flattenToString());
             else startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
@@ -368,6 +392,15 @@ public final class MainActivity extends AppCompatActivity implements AppAdapter.
         Set<String> set = new HashSet<>(prefs.getStringSet(key, Collections.emptySet()));
         if (!set.add(value)) set.remove(value); prefs.edit().putStringSet(key, set).apply();
         clearAppCaches();
+    }
+
+    private void toggleHome(String value) {
+        Set<String> set = new HashSet<>(prefs.getStringSet("main_home", Collections.emptySet()));
+        if (set.contains(value)) set.remove(value);
+        else if (set.size() >= 16) { Toast.makeText(this, "Home screen is full", Toast.LENGTH_SHORT).show(); return; }
+        else set.add(value);
+        prefs.edit().putStringSet("main_home", set).apply();
+        buildHomeApps();
     }
 
     private void requestDefaultLauncher() {

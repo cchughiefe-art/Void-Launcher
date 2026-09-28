@@ -94,6 +94,7 @@ public final class SettingsActivity extends AppCompatActivity {
         toggle("Show app labels", "Display names below icons", "show_labels", true);
         button("Use 4-column grid", v -> setColumns(4));
         button("Use 5-column grid", v -> setColumns(5));
+        button("Clear Home screen apps", v -> clearHomeApps());
 
         section("Private Space");
         button("Clear Private Space app list", v -> clearPrivateApps());
@@ -209,6 +210,10 @@ public final class SettingsActivity extends AppCompatActivity {
         prefs.edit().putStringSet("private_allowed", new java.util.HashSet<>()).putBoolean("private_initialized", true).apply();
         MainActivity.clearAppCaches();
         Toast.makeText(this, "Private Space app list cleared", Toast.LENGTH_SHORT).show();
+    }
+    private void clearHomeApps() {
+        prefs.edit().remove("main_home").apply(); MainActivity.clearAppCaches();
+        Toast.makeText(this, "Home screen apps cleared", Toast.LENGTH_SHORT).show();
     }
     private void resetPrivateSpace() {
         clearDepth("private");

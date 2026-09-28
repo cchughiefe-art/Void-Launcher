@@ -18,7 +18,10 @@
             android:format12Hour="EEEE, MMMM d" android:format24Hour="EEEE, MMMM d"
             android:textColor="@color/void_muted" android:textSize="16sp" />
 
-        <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1" />
+        <androidx.recyclerview.widget.RecyclerView android:id="@+id/homeApps"
+            android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+            android:clipToPadding="false" android:overScrollMode="never"
+            android:paddingTop="24dp" android:paddingBottom="16dp" />
 
         <LinearLayout android:id="@+id/dock" android:layout_width="match_parent" android:layout_height="82dp"
             android:background="@drawable/panel" android:gravity="center" android:orientation="horizontal"
