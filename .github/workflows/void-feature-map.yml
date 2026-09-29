@@ -1,0 +1,33 @@
+name: Map Void feature integration points
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  map:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Map launcher code
+        run: |
+          set -euo pipefail
+          {
+            echo '# Void feature integration map'
+            echo
+            echo '## Drawer and gesture controllers'
+            rg -n -m 160 'AllAppsTransitionController|PortraitStatesTouchController|SwipeDetector|ALL_APPS|allApps' src quickstep lawnchair/src --glob '*.{java,kt}' || true
+            echo
+            echo '## Launcher lifecycle and touch entry'
+            rg -n -m 140 'onTouchEvent|dispatchTouchEvent|onResume|onPause|onStop|LauncherState' src quickstep lawnchair/src --glob '*Launcher*.{java,kt}' || true
+            echo
+            echo '## Settings and preferences'
+            rg -n -m 120 'Preference|PreferenceScreen|SwitchPreference|Settings' lawnchair/src --glob '*.{kt,xml}' || true
+            echo
+            echo '## Security support'
+            rg -n -m 80 'BiometricPrompt|FLAG_SECURE|androidx.biometric' . --glob '*.{kt,java,kts,gradle,xml}' --glob '!build/**' || true
+          } > VOID_CODEMAP.md
+          git config user.name 'Void Launcher Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add VOID_CODEMAP.md
+          git commit -m 'Map Void gesture and Private Space integration points'
+          git push origin HEAD:main
