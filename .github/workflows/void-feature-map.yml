@@ -13,21 +13,17 @@ jobs:
           set -euo pipefail
           {
             echo '# Void feature integration map'
-            echo
-            echo '## Drawer and gesture controllers'
-            rg -n -m 160 'AllAppsTransitionController|PortraitStatesTouchController|SwipeDetector|ALL_APPS|allApps' src quickstep lawnchair/src --glob '*.{java,kt}' || true
-            echo
-            echo '## Launcher lifecycle and touch entry'
-            rg -n -m 140 'onTouchEvent|dispatchTouchEvent|onResume|onPause|onStop|LauncherState' src quickstep lawnchair/src --glob '*Launcher*.{java,kt}' || true
-            echo
-            echo '## Settings and preferences'
-            rg -n -m 120 'Preference|PreferenceScreen|SwitchPreference|Settings' lawnchair/src --glob '*.{kt,xml}' || true
-            echo
-            echo '## Security support'
-            rg -n -m 80 'BiometricPrompt|FLAG_SECURE|androidx.biometric' . --glob '*.{kt,java,kts,gradle,xml}' --glob '!build/**' || true
+            echo '## Drawer and gestures'
+            grep -RInE 'AllAppsTransitionController|PortraitStatesTouchController|SwipeDetector|ALL_APPS' src quickstep lawnchair/src --include='*.java' --include='*.kt' | head -n 180 || true
+            echo '## Lifecycle and touch'
+            grep -RInE 'dispatchTouchEvent|onTouchEvent|onResume|onPause|onStop' src quickstep lawnchair/src --include='*Launcher*.java' --include='*Launcher*.kt' | head -n 120 || true
+            echo '## Settings'
+            grep -RInE 'PreferenceScreen|SwitchPreference|PreferenceManager' lawnchair/src --include='*.kt' --include='*.xml' | head -n 120 || true
+            echo '## Security'
+            grep -RInE 'BiometricPrompt|FLAG_SECURE|androidx.biometric' . --include='*.kt' --include='*.java' --include='*.gradle' --include='*.xml' --exclude-dir=build | head -n 80 || true
           } > VOID_CODEMAP.md
           git config user.name 'Void Launcher Bot'
           git config user.email 'actions@users.noreply.github.com'
           git add VOID_CODEMAP.md
-          git commit -m 'Map Void gesture and Private Space integration points'
+          git commit -m 'Refresh Void feature integration map'
           git push origin HEAD:main
