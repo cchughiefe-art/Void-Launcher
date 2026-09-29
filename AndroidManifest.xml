@@ -1,34 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-/*
-**
-** Copyright 2008, The Android Open Source Project
-**
-** Licensed under the Apache License, Version 2.0 (the "License");
-** you may not use this file except in compliance with the License.
-** You may obtain a copy of the License at
-**
-**     http://www.apache.org/licenses/LICENSE-2.0
-**
-** Unless required by applicable law or agreed to in writing, software
-** distributed under the License is distributed on an "AS IS" BASIS,
-** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-** See the License for the specific language governing permissions and
-** limitations under the License.
-**
-** Modifications copyright 2021, Lawnchair
-*/
--->
+<!-- Copyright 2008 The Android Open Source Project; modifications copyright Lawnchair and Void Launcher. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <uses-sdk android:targetSdkVersion="30" android:minSdkVersion="26"
         tools:overrideLibrary="com.kieronquinn.app.smartspacer.sdk.client"/>
-    <!--
-    Manifest entries specific to Launcher3. This is merged with AndroidManifest-common.xml.
-    Refer comments around specific entries on how to extend individual components.
-    -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Permission required to start a WidgetPickerActivity. -->
     <permission android:name="${applicationId}.permission.START_WIDGET_PICKER_ACTIVITY"
         android:protectionLevel="signature|privileged" />
 
@@ -44,12 +21,8 @@
         android:theme="@style/AppTheme"
         android:largeHeap="@bool/config_largeHeap"
         android:restoreAnyVersion="true"
-        android:supportsRtl="true" >
+        android:supportsRtl="true">
 
-        <!--
-        Main launcher activity. When extending only change the name, and keep all the
-        attributes and intent filters the same
-        -->
         <activity
             android:name="app.lawnchair.LawnchairLauncher"
             android:launchMode="singleTask"
@@ -70,7 +43,7 @@
                 <action android:name="android.intent.action.ALL_APPS" />
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.MONKEY"/>
+                <category android:name="android.intent.category.MONKEY" />
                 <category android:name="android.intent.category.LAUNCHER_APP" />
             </intent-filter>
             <meta-data
@@ -91,12 +64,22 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-    
+
         <activity
             android:name="com.android.launcher3.VoidPrivateSpaceActivity"
             android:exported="false"
             android:excludeFromRecents="true"
             android:launchMode="singleTask"
+            android:screenOrientation="unspecified" />
+        <activity
+            android:name="com.android.launcher3.VoidVaultActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:screenOrientation="unspecified" />
+        <activity
+            android:name="com.android.launcher3.VoidPrivateBrowserActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
             android:screenOrientation="unspecified" />
     </application>
 </manifest>
