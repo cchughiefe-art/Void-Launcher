@@ -5,6 +5,8 @@
     <uses-sdk android:targetSdkVersion="30" android:minSdkVersion="26"
         tools:overrideLibrary="com.kieronquinn.app.smartspacer.sdk.client"/>
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
 
     <permission android:name="${applicationId}.permission.START_WIDGET_PICKER_ACTIVITY"
         android:protectionLevel="signature|privileged" />
