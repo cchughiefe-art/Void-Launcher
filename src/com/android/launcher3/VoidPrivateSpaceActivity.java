@@ -79,20 +79,35 @@ public class VoidPrivateSpaceActivity extends Activity {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) { requestDeviceCredential(); return; }
         authenticating = true;
         cancellationSignal = new CancellationSignal();
-        BiometricPrompt prompt = new BiometricPrompt.Builder(this)
-                .setTitle("Unlock Void Private Space")
-                .setSubtitle("Use your fingerprint or phone screen lock")
-                .setNegativeButton("Use screen lock", getMainExecutor(), (dialog, which) -> requestDeviceCredential())
-                .build();
-        prompt.authenticate(cancellationSignal, getMainExecutor(), new BiometricPrompt.AuthenticationCallback() {
-            @Override public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) { authenticating = false; showUnlocked(); }
-            @Override public void onAuthenticationError(int code, CharSequence message) {
-                authenticating = false;
-                if (code != BiometricPrompt.BIOMETRIC_ERROR_CANCELED
-                        && code != BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED
-                        && code != BiometricPrompt.BIOMETRIC_ERROR_NEGATIVE_BUTTON) requestDeviceCredential();
-            }
-        });
+        try {
+            BiometricPrompt prompt = new BiometricPrompt.Builder(this)
+                    .setTitle("Unlock Void Private Space")
+                    .setSubtitle("Use your fingerprint or phone screen lock")
+                    .setNegativeButton("Use screen lock", getMainExecutor(),
+                            (dialog, which) -> requestDeviceCredential())
+                    .build();
+            prompt.authenticate(cancellationSignal, getMainExecutor(),
+                    new BiometricPrompt.AuthenticationCallback() {
+                        @Override public void onAuthenticationSucceeded(
+                                BiometricPrompt.AuthenticationResult result) {
+                            authenticating = false;
+                            showUnlocked();
+                        }
+
+                        @Override public void onAuthenticationError(int code,
+                                CharSequence message) {
+                            authenticating = false;
+                            if (code != BiometricPrompt.BIOMETRIC_ERROR_CANCELED
+                                    && code != BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED
+                                    && code != BiometricPrompt.BIOMETRIC_ERROR_NEGATIVE_BUTTON) {
+                                requestDeviceCredential();
+                            }
+                        }
+                    });
+        } catch (RuntimeException biometricFailure) {
+            authenticating = false;
+            requestDeviceCredential();
+        }
     }
 
     private void requestDeviceCredential() {
