@@ -1,0 +1,100 @@
+name: Apply Void Launcher identity
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  identity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - name: Rebrand repository and app
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > README.md <<'EOF'
+          # Void Launcher
+
+          **A private, Pixel-style Android launcher built for speed, control and two distinct spaces.**
+
+          Void Launcher combines a clean Pixel home screen with deep customization and a fingerprint-protected Private Space. It uses Android Launcher3 and the open-source Lawnchair engine as its foundation, then develops an independent Void experience.
+
+          ## Included foundation
+          - Material 3 Expressive and wallpaper colours
+          - At a Glance and Smartspacer integration
+          - Fast searchable app drawer
+          - Icon packs, fonts, grids, widgets, folders and gestures
+          - Hidden apps and optional QuickSwitch support
+          - Reproducible signed APK builds through GitHub Actions
+
+          ## Void direction
+          - Easy upward swipe opens the Main drawer
+          - Downward drawer swipe returns home
+          - Either screen edge opens fingerprint-protected Private Space
+          - Private apps, browser, gallery, files and downloads
+          - Screenshot protection inside Private Space only
+          - Separate wallpapers, depth, motion and lock-screen controls
+
+          See [VOID_ROADMAP.md](VOID_ROADMAP.md) for implementation status.
+
+          ## Build
+          Java 21 is required. Run `./gradlew assembleLawnWithQuickstepGithubRelease`.
+
+          ## Credits and licence
+          Void Launcher is maintained by **cchughiefe-art**. Required Android Launcher3 and Lawnchair copyright and licence notices remain in [LICENSE.txt](LICENSE.txt). Void is not affiliated with Google or the Lawnchair project.
+          EOF
+          cat > VOID_ROADMAP.md <<'EOF'
+          # Void Launcher roadmap
+
+          ## Complete
+          - [x] Production Launcher3 foundation
+          - [x] Void application ID and signed builds
+          - [x] Void repository, app and store identity
+
+          ## Main Space
+          - [ ] Easier upward drawer gesture
+          - [ ] Downward drawer gesture returns home
+          - [ ] Void Pixel preset, icon actions, widgets and folders
+
+          ## Private Space
+          - [ ] Either-edge entry and BiometricPrompt
+          - [ ] Private app collection, search and auto-lock
+          - [ ] Encrypted gallery, browser, files and downloads
+          - [ ] Screenshot protection only while private
+
+          ## Wallpaper
+          - [ ] Separate Main, Private and lock-screen wallpapers
+          - [ ] Sensor parallax and reduced-motion support
+          - [ ] Subject-over-clock depth effect
+          EOF
+          cat > VOID_REBUILD.md <<'EOF'
+          # Void Launcher foundation
+          Void uses Android Launcher3 and Lawnchair as an open-source engine. Product identity, package, roadmap, signing pipeline and Void features are maintained here. Required upstream notices remain intact. Internal upstream identifiers may remain where renaming would break compatibility.
+          EOF
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+          roots=[Path('lawnchair/src/main/res'),Path('res'),Path('quickstep/res'),Path('fastlane/metadata/android')]
+          n=0
+          for root in roots:
+            if not root.exists(): continue
+            for p in root.rglob('*'):
+              if not p.is_file() or p.suffix not in {'.xml','.txt'}: continue
+              try: s=p.read_text(encoding='utf-8')
+              except UnicodeDecodeError: continue
+              old=s
+              if p.suffix=='.xml':
+                s=re.sub(r'>([^<>]*?)Lawnchair([^<>]*?)<',lambda m:'>'+m[1]+'Void Launcher'+m[2]+'<',s)
+                s=re.sub(r'>([^<>]*?)lawnchair([^<>]*?)<',lambda m:'>'+m[1]+'Void Launcher'+m[2]+'<',s)
+              else: s=s.replace('Lawnchair','Void Launcher').replace('lawnchair','Void Launcher')
+              if s!=old: p.write_text(s,encoding='utf-8'); n+=1
+          for p in Path('fastlane/metadata/android').glob('*/title.txt'):
+            p.write_text('Void Launcher\n',encoding='utf-8')
+          print('updated',n,'identity files')
+          PY
+          git config user.name 'Void Launcher Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add README.md VOID_ROADMAP.md VOID_REBUILD.md lawnchair/src/main/res res quickstep/res fastlane/metadata/android 2>/dev/null || true
+          git diff --cached --quiet || { git commit -m 'Make repository and app identity entirely Void Launcher'; git push origin HEAD:main; }
