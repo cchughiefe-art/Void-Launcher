@@ -320,7 +320,7 @@ public abstract class AbstractStateChangeTouchController
                 successTransitionProgress = TABLET_BOTTOM_SHEET_SUCCESS_TRANSITION_PROGRESS;
             } else if (!mLauncher.getDeviceProfile().getDeviceProperties().isTablet()
                     && mToState == ALL_APPS && mFromState == NORMAL) {
-                successTransitionProgress = AllAppsSwipeController.ALL_APPS_STATE_TRANSITION_MANUAL;
+                successTransitionProgress = Math.min(0.22f, AllAppsSwipeController.ALL_APPS_STATE_TRANSITION_MANUAL);
             } else if (!mLauncher.getDeviceProfile().getDeviceProperties().isTablet()
                     && mToState == NORMAL && mFromState == ALL_APPS) {
                 successTransitionProgress =

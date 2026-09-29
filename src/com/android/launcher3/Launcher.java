@@ -409,6 +409,13 @@ public class Launcher extends StatefulActivity<LauncherState>
     protected long mLastTouchUpTime = -1;
     private boolean mTouchInProgress;
 
+    // Void Private Space: inward swipe from either edge opens the secure space.
+    private float mVoidGestureDownX;
+    private float mVoidGestureDownY;
+    private boolean mVoidEdgeGestureActive;
+    private boolean mVoidPrivateSpaceOpening;
+
+
     // New InstanceId is assigned to mAllAppsSessionLogId for each AllApps sessions.
     // When Launcher is not in AllApps state mAllAppsSessionLogId will be null.
     // User actions within AllApps state are logged with this InstanceId, to recreate AllApps
@@ -2088,15 +2095,41 @@ public class Launcher extends StatefulActivity<LauncherState>
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        switch (ev.getAction()) {
+        final float density = getResources().getDisplayMetrics().density;
+        switch (ev.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 mTouchInProgress = true;
+                mVoidPrivateSpaceOpening = false;
+                mVoidGestureDownX = ev.getX();
+                mVoidGestureDownY = ev.getY();
+                float edge = 32f * density;
+                mVoidEdgeGestureActive = isInState(NORMAL)
+                        && (mVoidGestureDownX <= edge
+                        || mVoidGestureDownX >= getRootView().getWidth() - edge);
+                break;
+            case MotionEvent.ACTION_MOVE:
+                if (mVoidEdgeGestureActive && !mVoidPrivateSpaceOpening) {
+                    float dx = ev.getX() - mVoidGestureDownX;
+                    float dy = ev.getY() - mVoidGestureDownY;
+                    boolean fromLeft = mVoidGestureDownX <= 32f * density && dx > 0;
+                    boolean fromRight = mVoidGestureDownX >= getRootView().getWidth()
+                            - 32f * density && dx < 0;
+                    if ((fromLeft || fromRight)
+                            && Math.abs(dx) >= 52f * density
+                            && Math.abs(dx) > Math.abs(dy) * 1.15f) {
+                        mVoidPrivateSpaceOpening = true;
+                        mVoidEdgeGestureActive = false;
+                        startActivity(new Intent(this, VoidPrivateSpaceActivity.class));
+                        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+                        return true;
+                    }
+                }
                 break;
             case MotionEvent.ACTION_UP:
                 mLastTouchUpTime = SystemClock.uptimeMillis();
-                // Follow through
             case MotionEvent.ACTION_CANCEL:
                 mTouchInProgress = false;
+                mVoidEdgeGestureActive = false;
                 break;
         }
         TestLogging.recordMotionEvent(TestProtocol.SEQUENCE_MAIN, "Touch event", ev);
