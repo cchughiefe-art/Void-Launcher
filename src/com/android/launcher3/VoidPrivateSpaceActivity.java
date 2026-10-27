@@ -146,10 +146,6 @@ public class VoidPrivateSpaceActivity extends Activity {
         Button browser = button("Private Browser"); browser.setOnClickListener(v -> startActivity(new Intent(this, VoidPrivateBrowserActivity.class)));
         tools.addView(browser, new LinearLayout.LayoutParams(0, dp(54), 1)); root.addView(tools, margins(-1, dp(58), 10));
 
-        Button agentBrowser = button("Agent Browser");
-        agentBrowser.setOnClickListener(v -> startActivity(new Intent(this, com.android.launcher3.agent.AgentBrowserActivity.class)));
-        root.addView(agentBrowser, margins(-1, dp(54), 8));
-
         Button systemPrivate = button("Set up Android Private Space");
         systemPrivate.setOnClickListener(v -> {
             Intent settings = new Intent("android.settings.PRIVATE_SPACE_SETTINGS");
