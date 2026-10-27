@@ -67,6 +67,7 @@ class LawnchairApp : LauncherApplication() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        if (Build.VERSION.SDK_INT >= 28 && android.app.Application.getProcessName().endsWith(":void_agent")) return
         QuickStepContract.sRecentsDisabled = !recentsEnabled
         Flowerpot.Manager.getInstance(this)
         registerActivityLifecycleCallbacks(activityHandler)
