@@ -31,6 +31,9 @@ public class LauncherApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        // Agent Browser owns a separate WebView process, not a second launcher instance.
+        if (android.os.Build.VERSION.SDK_INT >= 28
+                && Application.getProcessName().endsWith(":void_agent")) return;
         MainProcessInitializer.initialize(this);
     }
 

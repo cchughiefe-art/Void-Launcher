@@ -469,6 +469,11 @@ class LawnchairLauncher : QuickstepLauncher() {
 
     override fun onResume() {
         super.onResume()
+        // Restore an enabled agent connection without taking over the home screen.
+        sendBroadcast(
+            Intent(this, com.android.launcher3.agent.AgentResumeReceiver::class.java)
+                .setAction(com.android.launcher3.agent.AgentResumeReceiver.RESUME),
+        )
         restartIfPending()
         refreshPredictionContainersFromModel()
 
