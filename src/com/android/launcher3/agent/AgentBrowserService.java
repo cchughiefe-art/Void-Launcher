@@ -36,6 +36,8 @@ public class AgentBrowserService extends Service {
     private boolean session;
     private int failures;
     private long nextAttempt, lastDiscovery;
+    private volatile long lastContact;
+    long lastContact() { return lastContact; }
     private PowerManager.WakeLock commandWake;
     public class LocalBinder extends Binder { AgentBrowserService service() { return AgentBrowserService.this; } }
     AgentWebEngine engine() { return engine; }
@@ -72,16 +74,17 @@ public class AgentBrowserService extends Service {
             if (!session) {
                 if (System.currentTimeMillis() - lastDiscovery > 10000) { relay.discover(); lastDiscovery = System.currentTimeMillis(); }
                 relay.call("/device/session", new JSONObject().put("enabled", true).put("untilStopped", true));
-                session = true; status("Connected · waiting for commands");
+                lastContact = System.currentTimeMillis(); session = true; status("Connected · waiting for commands");
             }
             // Recover a completed receipt first. Never repeat the browser action after a restart.
-            if (receiptFile.getBaseFile().exists()) { deliverPending(); if (receiptFile.getBaseFile().exists()) return; }
+            if (receiptFile.exists()) { deliverPending(); if (receiptFile.exists()) return; }
             String uncertain = settings.prefs.getString("inflight", "");
             if (!uncertain.isEmpty()) {
                 saveReceipt(uncertain, AgentWebEngine.error("Phone process interrupted this command. It was not retried."));
                 deliverPending(); return;
             }
             JSONObject next = relay.call("/device/next", null);
+            lastContact = System.currentTimeMillis();
             if (next.optBoolean("expired")) { session = false; return; }
             JSONObject command = next.optJSONObject("command");
             if (command == null) { failures = 0; return; }
