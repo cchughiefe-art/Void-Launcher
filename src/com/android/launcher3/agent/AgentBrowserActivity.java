@@ -35,7 +35,9 @@ public class AgentBrowserActivity extends Activity {
     private final Runnable refresh = new Runnable() {
         @Override public void run() {
             if (!resumed) return;
-            status.setText(settings.prefs.getString("status", "Not connected") + (settings.enabled() ? "\nConnection enabled until Stop" : "\nConnection off"));
+            long contact = service == null ? 0 : service.lastContact();
+            String freshness = contact == 0 ? "" : "\nLast relay response " + Math.max(0, (System.currentTimeMillis() - contact) / 1000) + "s ago";
+            status.setText(settings.prefs.getString("status", "Not connected") + freshness + (settings.enabled() ? "\nConnection enabled until Stop" : "\nConnection off"));
             main.postDelayed(this, 1000);
         }
     };
