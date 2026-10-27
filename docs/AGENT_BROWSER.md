@@ -1,6 +1,6 @@
 # VOID Agent Browser
 
-Agent Browser has its own icon and a button in Private Space. Android 9+ is required for its separate WebView profile. It does not replace Private Browser.
+Agent Browser has its own icon outside Private Space. Returning to the launcher resumes an already enabled connection in the background; it never takes over the home screen or overrides Stop. Android 9+ is required for its separate WebView profile. It does not replace Private Browser.
 
 ## Setup
 1. Install the signed update over the existing launcher. Do not uninstall the launcher.
@@ -9,7 +9,7 @@ Agent Browser has its own icon and a button in Private Space. Android 9+ is requ
 4. Tap **Start** and allow the notification. The connection stays enabled until **Stop**; there is no 15-minute timer in this client. Upgrade the relay to v0.9 for matching stop-controlled session semantics.
 5. Switch apps. A visible notification provides Open and Stop. For Infinix battery restrictions, use the provided Android app settings button and configure background battery access yourself.
 
-The enabled connection resumes after a normal service-process restart, device reboot after unlock, or app update, if Resume after restart is selected. Stop persists across reboot. Force-stop, revoked permissions, OS limits, network loss, and vendor battery management can still interrupt the connection. The app cannot promise 24/7 operation or launch a UI over Android's restrictions.
+The enabled connection resumes whenever the launcher returns to the foreground, after a normal service-process restart, device reboot after unlock, or app update, if Resume after restart is selected. Stop persists across reboot. Force-stop, revoked permissions, OS limits, network loss, and vendor battery management can still interrupt the connection. The app cannot promise 24/7 operation or launch a UI over Android's restrictions.
 
 ## Browser and relay
 - Separate :void_agent process and WebView data suffix isolate cookies from Private Browser's cookie clearing.
