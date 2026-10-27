@@ -43,6 +43,13 @@ jobs:
             printf 'keyPassword=%s\n' "$VOID_KEY_PASSWORD"
           } > keystore.properties
 
+      - name: Validate Agent Browser policy and capture
+        run: |
+          mkdir -p "$RUNNER_TEMP/agent-policy"
+          javac -d "$RUNNER_TEMP/agent-policy" src/com/android/launcher3/agent/AgentPolicy.java tests/agent/AgentPolicyTest.java
+          java -cp "$RUNNER_TEMP/agent-policy" com.android.launcher3.agent.AgentPolicyTest
+          node tools/test-agent-capture.cjs
+
       - name: Build signed release APK
         run: ./gradlew --no-daemon assembleLawnWithQuickstepGithubRelease
 
