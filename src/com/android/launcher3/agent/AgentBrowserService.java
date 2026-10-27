@@ -32,6 +32,7 @@ public class AgentBrowserService extends Service {
     private AgentRelay relay;
     private AgentWebEngine engine;
     private AtomicFile receiptFile;
+    private final Object receiptLock = new Object();
     private volatile boolean closed;
     private boolean session;
     private int failures;
@@ -77,7 +78,7 @@ public class AgentBrowserService extends Service {
                 lastContact = System.currentTimeMillis(); session = true; status("Connected · waiting for commands");
             }
             // Recover a completed receipt first. Never repeat the browser action after a restart.
-            if (receiptFile.exists()) { deliverPending(); if (receiptFile.exists()) return; }
+            if (hasReceipt()) { deliverPending(); if (hasReceipt()) return; }
             String uncertain = settings.prefs.getString("inflight", "");
             if (!uncertain.isEmpty()) {
                 saveReceipt(uncertain, AgentWebEngine.error("Phone process interrupted this command. It was not retried."));
@@ -113,14 +114,23 @@ public class AgentBrowserService extends Service {
                     ? "Device key rejected · open Agent Browser settings" : "Connection interrupted · retrying with backoff");
         }
     }
+    private boolean hasReceipt() {
+        synchronized (receiptLock) {
+            return receiptFile.getBaseFile().exists() || new File(receiptFile.getBaseFile().getPath() + ".bak").exists();
+        }
+    }
     private void saveReceipt(String id, JSONObject result) throws Exception {
+        synchronized (receiptLock) {
+        if (closed || !settings.enabled()) return;
         JSONObject saved = new JSONObject().put("id", id).put("result", result);
         java.io.FileOutputStream out = receiptFile.startWrite();
         try { out.write(saved.toString().getBytes(StandardCharsets.UTF_8)); receiptFile.finishWrite(out); }
         catch (Exception e) { receiptFile.failWrite(out); throw e; }
+        }
     }
     private void deliverPending() throws Exception {
-        JSONObject r = new JSONObject(new String(receiptFile.readFully(), StandardCharsets.UTF_8));
+        JSONObject r;
+        synchronized (receiptLock) { r = new JSONObject(new String(receiptFile.readFully(), StandardCharsets.UTF_8)); }
         String id = r.getString("id");
         if (!id.matches("[a-f0-9-]{36}")) throw new IllegalArgumentException("Invalid saved receipt");
         try { relay.call("/results/" + id, r.getJSONObject("result")); }
@@ -129,13 +139,13 @@ public class AgentBrowserService extends Service {
             // Relay restart/Stop invalidates the lease. Do not repeat the action.
             settings.status("Previous command lease ended; action was not repeated.");
         }
-        settings.prefs.edit().putString("completed", id).remove("inflight").commit(); receiptFile.delete();
+        synchronized (receiptLock) { settings.prefs.edit().putString("completed", id).remove("inflight").commit(); receiptFile.delete(); }
     }
     public void stopConnection() {
         settings.enabled(false); closed = true;
         if (engine != null) engine.stopCommands();
         // Clear local intent synchronously before any asynchronous network operation.
-        settings.prefs.edit().remove("inflight").commit(); receiptFile.delete();
+        synchronized (receiptLock) { settings.prefs.edit().remove("inflight").commit(); receiptFile.delete(); }
         settings.status("Stopped by you");
         io.execute(() -> { try { relay.call("/device/session", new JSONObject().put("enabled", false)); } catch (Exception ignored) {} });
         stopForeground(STOP_FOREGROUND_REMOVE); stopSelf();
