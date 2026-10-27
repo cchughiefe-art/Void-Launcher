@@ -153,6 +153,7 @@ final class AgentWebEngine {
         eval(AgentCapture.SCRIPT, result -> {
             if (!current(epoch)) return;
             if (result.optBoolean("blocked")) { blocked(); return; }
+            if (!result.has("error") && (!result.has("url") || !result.optString("url").equals(web.getUrl()))) { fail("Capture URL did not match the browser page."); return; }
             if (result.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 170000) { fail("Capture too large; choose a narrower page."); return; }
             finish(result);
         });
