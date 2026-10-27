@@ -237,6 +237,8 @@
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="User-started persistent read-only agent browser connection with a visible Stop notification; retains the browser profile while the user switches apps." />
         </service>
+        <receiver android:name="com.android.launcher3.agent.AgentResumeReceiver"
+            android:process=":void_agent" android:exported="false" />
         <receiver android:name="com.android.launcher3.agent.AgentBootReceiver"
             android:process=":void_agent" android:exported="false">
             <intent-filter>
