@@ -43,7 +43,7 @@ public class AgentBrowserActivity extends Activity {
     };
     private final ServiceConnection connection = new ServiceConnection() {
         @Override public void onServiceConnected(ComponentName n, IBinder b) {
-            service = ((AgentBrowserService.LocalBinder)b).service(); attachBrowser();
+            service = ((AgentBrowserService.LocalBinder)b).service(); service.setCloseScreen(() -> finish()); attachBrowser();
         }
         @Override public void onServiceDisconnected(ComponentName n) { service = null; status.setText("Browser process disconnected; reopen this screen to recover."); }
     };
@@ -64,12 +64,16 @@ public class AgentBrowserActivity extends Activity {
         browserHost = column(); root.addView(browserHost, new LinearLayout.LayoutParams(-1, 0, 1)); setContentView(root);
     }
     @Override protected void onStart() {
-        super.onStart(); if (settings == null) return; bound = bindService(new Intent(this, AgentBrowserService.class), connection, BIND_AUTO_CREATE);
+        super.onStart(); if (settings == null) return;
+        // A started service outlives onStop/unbind while the user checks a sign-in code.
+        try { startForegroundService(new Intent(this, AgentBrowserService.class).setAction(AgentBrowserService.OPEN_BROWSER)); }
+        catch (RuntimeException e) { settings.status("Android could not keep the browser open. Reopen it and try again."); }
+        bound = bindService(new Intent(this, AgentBrowserService.class), connection, BIND_AUTO_CREATE);
     }
     @Override protected void onResume() { super.onResume(); if (settings == null) return; resumed = true; main.post(refresh); }
     @Override protected void onPause() { resumed = false; main.removeCallbacks(refresh); super.onPause(); }
     @Override protected void onStop() {
-        if (service != null) service.engine().detach(getApplicationContext());
+        if (service != null) { service.setCloseScreen(null); if (service.engine() != null) service.engine().detach(getApplicationContext()); }
         if (bound) { unbindService(connection); bound = false; } service = null; super.onStop();
     }
     private void attachBrowser() {
