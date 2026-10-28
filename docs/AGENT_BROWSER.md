@@ -11,6 +11,13 @@ Agent Browser has its own icon outside Private Space. Returning to the launcher 
 
 The enabled connection resumes whenever the launcher returns to the foreground, after a normal service-process restart, device reboot after unlock, or app update, if Resume after restart is selected. Stop persists across reboot. Force-stop, revoked permissions, OS limits, network loss, and vendor battery management can still interrupt the connection. The app cannot promise 24/7 operation or launch a UI over Android's restrictions.
 
+## Switching apps for verification codes
+Opening Agent Browser starts its browser-host service independently of the relay connection. You can sign in before tapping Start, switch to your messages/email app, and return to the same in-memory WebView. Leaving the screen detaches the view without destroying the started service.
+
+The notification has **Stop agent** (disable remote commands, keep the page) and **Close browser** (disable commands and close the browser host). Android process/renderer death can still lose an unfinished form; the app does not save passwords or verification codes to disk.
+
+Regression check: with the agent connection off, reach a verification-code form, switch to messages/email, return, and verify the page/form has not restarted. Repeat after enabling and then stopping agent access.
+
 ## Browser and relay
 - Separate :void_agent process and WebView data suffix isolate cookies from Private Browser's cookie clearing.
 - Service retains its WebView when the activity closes. Closing the screen does not clear browser login.
