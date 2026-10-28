@@ -4,6 +4,7 @@
  const sensitive=e=>e.type==='password'||/password|passwd|one.?time|otp|cc-number|credit.?card|cvv|cvc|private.?key|seed.?phrase/i.test([e.autocomplete,e.name,e.id,e.getAttribute('aria-label')].join(' '));
  const sensitivePage=()=>/\/(login|signin|sign-in|auth|oauth|checkout|payment)(\/|$)/i.test(location.pathname)||[...document.querySelectorAll('input[type=password],input[autocomplete=one-time-code]')].some(visible);
  const caption=e=>(e.getAttribute('aria-label')||e.labels?.[0]?.innerText||e.getAttribute('placeholder')||((e.tagName==='BUTTON'||e.tagName==='A'||e.getAttribute('role')==='button')?e.innerText:'')||e.getAttribute('title')||e.name||e.tagName).trim().slice(0,200);
+ const contextInfo=e=>{const article=e.closest?.('article');if(article){const time=article.querySelector?.('time');const url=time?.closest?.('a')?.href||'';return {url,text:(article.innerText||'').trim().slice(0,180),key:url||(article.innerText||'').trim().slice(0,180)};}const dialog=e.closest?.('[role=dialog]');return {url:'',text:dialog?(dialog.innerText||'').trim().slice(0,180):'',key:dialog?(dialog.innerText||'').trim().slice(0,180):''};};
  const signature=e=>[e.tagName,e.type||'',e.getAttribute('role')||'',caption(e)].join('|');
  if(blocked())return {blocked:true,error:'Site restriction encountered; session stopped.'};
  if(request.action==='inspect'){
@@ -11,8 +12,8 @@
   const token=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);const elements=new Map();const controls=[];
   for(const e of document.querySelectorAll('button,a[href],input,textarea,select,[contenteditable=true],[role=button],[role=textbox]')){
    if(controls.length>=120)break;if(!visible(e)||e.disabled||e.getAttribute('aria-disabled')==='true'||e.type==='hidden'||sensitive(e))continue;
-   const id='e'+(controls.length+1);elements.set(id,{element:e,signature:signature(e)});
-   const item={id,tag:e.tagName.toLowerCase(),type:e.type||'',role:e.getAttribute('role')||'',label:caption(e)};
+   const id='e'+(controls.length+1);const context=contextInfo(e);elements.set(id,{element:e,signature:signature(e),contextKey:context.key});
+   const item={id,tag:e.tagName.toLowerCase(),type:e.type||'',role:e.getAttribute('role')||'',label:caption(e),contextText:context.text,contextUrl:context.url};
    if(e.tagName==='A'&&e.href?.startsWith('https://'))item.url=e.href;
    if(e.tagName==='SELECT')item.options=[...e.options].slice(0,50).map(o=>({value:o.value,label:o.text}));
    controls.push(item);
@@ -23,6 +24,7 @@
  if(!state||state.consumed||state.token!==request.snapshotId||state.url!==request.pageUrl||location.href!==request.pageUrl)return {error:'Page controls changed. Capture again; do not retry a publication blindly.'};
  const record=state.elements.get(request.targetId),e=record?.element;
  if(!e||!e.isConnected||!visible(e)||e.disabled||e.getAttribute('aria-disabled')==='true'||signature(e)!==record.signature)return {error:'Target changed. Capture again.'};
+ if(contextInfo(e).key!==record.contextKey)return {error:'Target context changed. Capture again.'};
  if(sensitivePage()||sensitive(e))return {error:'Complete credentials, verification codes and sensitive forms manually.'};
  if(request.action==='fill'){
   if(typeof request.text!=='string'||request.text.length>12000)return {error:'Invalid field text'};
