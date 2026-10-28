@@ -48,20 +48,28 @@ final class AgentWebEngine {
     WebView peekSelectedPage() { return pages.get(tabs.selected()); }
     private CompletableFuture<JSONObject> pending;
     private JSONObject command;
-    private long deadline;
+    private long deadline, stableSince;
+    private String lastSignature;
+    private JSONObject scrollResult;
+    private int viewportWidth, viewportHeight;
+    private long screenArea;
     private String navigationError;
     private int generation;
     private boolean dead, navigationStarted, capturing;
     private Runnable inspect;
     AgentWebEngine(Context c, AgentSettings settings) {
         this.settings = settings; context = new MutableContextWrapper(c);
+        android.util.DisplayMetrics dm=c.getResources().getDisplayMetrics();screenArea=(long)dm.widthPixels*dm.heightPixels;
+        viewportWidth=settings.prefs.getInt("browser_viewport_width",Math.max(320,dm.widthPixels));
+        viewportHeight=settings.prefs.getInt("browser_viewport_height",Math.max(480,dm.heightPixels-Math.round(170*dm.density)));
         tabs = new BrowserTabs(settings.prefs.getString("last_url", "https://x.com"));
         try {
             JSONArray saved = new JSONArray(settings.prefs.getString("browser_tabs", "[]"));
             for (int i=0; i<saved.length(); i++) {
                 JSONObject t = saved.getJSONObject(i); String url = t.optString("url", "about:blank");
                 if (!url.equals("about:blank")) url = AgentPolicy.browserUrl(url);
-                if (i==0) tabs.get(BrowserTabs.AGENT).url = url; else tabs.add(url);
+                int restoredId; if (i==0) { restoredId=BrowserTabs.AGENT; tabs.get(restoredId).url = url; } else restoredId=tabs.add(url);
+                tabs.get(restoredId).desktop=t.optBoolean("desktop",false);
             }
             int selected = settings.prefs.getInt("browser_selected", BrowserTabs.AGENT);
             try { tabs.select(selected); } catch (Exception ignored) { tabs.select(BrowserTabs.AGENT); }
@@ -74,6 +82,7 @@ final class AgentWebEngine {
         WebSettings s = page.getSettings(); s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true);
         s.setAllowFileAccess(false); s.setAllowContentAccess(false); s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         s.setJavaScriptCanOpenWindowsAutomatically(false); s.setSupportMultipleWindows(false);
+        applyMode(page,id);
         s.setMediaPlaybackRequiresUserGesture(true); s.setGeolocationEnabled(false); s.setSaveFormData(false);
         CookieManager.getInstance().setAcceptCookie(true); CookieManager.getInstance().setAcceptThirdPartyCookies(page, false);
         page.setDownloadListener((url, ua, disposition, mime, size) -> {
@@ -104,8 +113,10 @@ final class AgentWebEngine {
             @Override public void onReceivedError(WebView v, WebResourceRequest r, android.webkit.WebResourceError e) {
                 if (v == web && r.isForMainFrame()) navigationError = "Page could not load (" + e.getErrorCode() + ").";
             }
+            @Override public void onPageCommitVisible(WebView v,String url) { if(pages.get(id)==v) applyDesktopViewport(v,id); }
             @Override public void onPageFinished(WebView v, String url) {
                 if (pages.get(id) != v) return;
+                applyDesktopViewport(v,id);
                 BrowserTabs.Tab t = tabs.get(id); t.url = url == null ? "about:blank" : url;
                 t.title = v.getTitle() == null ? "Page" : v.getTitle();
                 if (v == web && BrowserAddress.canRemember(t.url)) settings.prefs.edit().putString("last_url", t.url).apply();
@@ -119,8 +130,7 @@ final class AgentWebEngine {
                 v.destroy(); settings.status("A tab renderer stopped; select that tab to recover."); changed(); return true;
             }
         });
-        page.measure(android.view.View.MeasureSpec.makeMeasureSpec(1080, android.view.View.MeasureSpec.EXACTLY), android.view.View.MeasureSpec.makeMeasureSpec(1700, android.view.View.MeasureSpec.EXACTLY));
-        page.layout(0, 0, 1080, 1700);
+        prepareDetached(page);
         String initial = tabs.get(id).url;
         if (initial.equals("about:blank")) startPage(page); else page.loadUrl(initial);
         return page;
@@ -138,7 +148,43 @@ final class AgentWebEngine {
     }
     void detach(Context application) {
         for (WebView page : pages.values()) if (page.getParent() instanceof ViewGroup) ((ViewGroup)page.getParent()).removeView(page);
-        context.setBaseContext(application); CookieManager.getInstance().flush();
+        context.setBaseContext(application);
+        for(WebView page:pages.values()) prepareDetached(page);
+        CookieManager.getInstance().flush();
+    }
+    void rememberViewport(int width,int height) {
+        if(width<240 || height<240 || (long)width*height<screenArea/3)return;
+        if(width==viewportWidth && height==viewportHeight)return;
+        viewportWidth=Math.min(4096,width);viewportHeight=Math.min(4096,height);
+        settings.prefs.edit().putInt("browser_viewport_width",viewportWidth).putInt("browser_viewport_height",viewportHeight).apply();
+    }
+    int viewportWidth(){return viewportWidth;}
+    int viewportHeight(){return viewportHeight;}
+    private void prepareDetached(WebView page) {
+        if(page.getParent()!=null)return;
+        page.setVisibility(View.VISIBLE);page.onResume();
+        page.measure(View.MeasureSpec.makeMeasureSpec(viewportWidth,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(viewportHeight,View.MeasureSpec.EXACTLY));
+        page.layout(0,0,viewportWidth,viewportHeight);
+    }
+    private void applyMode(WebView page,int id) {
+        WebSettings s=page.getSettings();boolean desktop=tabs.get(id).desktop;
+        s.setUserAgentString(desktop?BrowserMode.desktopUserAgent(WebSettings.getDefaultUserAgent(context)):null);
+        s.setUseWideViewPort(true);s.setLoadWithOverviewMode(desktop);
+        s.setSupportZoom(true);s.setBuiltInZoomControls(true);s.setDisplayZoomControls(false);
+        page.setInitialScale(0);
+    }
+    private void applyDesktopViewport(WebView page,int id) {
+        if(!tabs.get(id).desktop)return;
+        page.evaluateJavascript("(()=>{let m=document.querySelector('meta[name=viewport]');if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}m.content='width=1280';})()",null);
+    }
+    boolean desktopMode(){return tabs.get(tabs.selected()).desktop;}
+    void setDesktopMode(boolean desktop) {
+        checkManual();int id=tabs.selected();WebView page=selectedPage();
+        if(tabs.get(id).desktop==desktop)return;
+        tabs.get(id).desktop=desktop;applyMode(page,id);saveTabs();
+        String url=page.getUrl();
+        if(url==null || url.equals("about:blank"))startPage(page);else page.loadUrl(AgentPolicy.browserUrl(url));
+        changed();
     }
     String activeUrl() { WebView page = selectedPage(); return page.getUrl() == null ? "about:blank" : page.getUrl(); }
     String activeTitle() { return selectedPage().getTitle(); }
@@ -169,7 +215,7 @@ final class AgentWebEngine {
     }
     private void saveTabs() {
         JSONArray out = new JSONArray();
-        for (BrowserTabs.Tab t : tabs.all()) try { out.put(new JSONObject().put("url", BrowserAddress.canRemember(t.url) ? t.url : "about:blank")); } catch (Exception ignored) {}
+        for (BrowserTabs.Tab t : tabs.all()) try { out.put(new JSONObject().put("url", BrowserAddress.canRemember(t.url) ? t.url : "about:blank").put("desktop",t.desktop)); } catch (Exception ignored) {}
         // Restore selection by its list position, since tab IDs are session-local.
         int position=1; for(int i=0;i<tabs.all().size();i++) if(tabs.all().get(i).id==tabs.selected()) position=i+1;
         settings.prefs.edit().putString("browser_tabs", out.toString()).putInt("browser_selected", position).apply();
@@ -201,7 +247,8 @@ final class AgentWebEngine {
                 if (action.equals("open") || action.equals("click_link")) AgentPolicy.publicUrl(c.getString("url"));
                 if (action.equals("click_link")) AgentPolicy.publicUrl(c.getString("pageUrl"));
                 if (action.equals("scroll") && !c.optString("direction").matches("up|down")) throw new IllegalArgumentException("Invalid scroll direction");
-                pending = f; command = c; navigationError = null; capturing = false; deadline = android.os.SystemClock.elapsedRealtime() + 20000;
+                prepareDetached(web);web.onResume();
+                pending = f; command = c; navigationError = null; capturing = false;lastSignature=null;stableSince=0;scrollResult=null; deadline = android.os.SystemClock.elapsedRealtime() + 20000;
                 int epoch = ++generation;
                 eval("JSON.stringify({blocked:/verify you are human|checking your browser|unusual activity|automated requests|account suspended|temporarily restricted|rate limit exceeded|too many requests/i.test(document.body?.innerText||'')})", guard -> {
                     if (!current(epoch)) return;
@@ -220,7 +267,7 @@ final class AgentWebEngine {
         JSONObject out = new JSONObject(); JSONArray list = new JSONArray();
         for (BrowserTabs.Tab t : tabs.all()) try {
             list.put(new JSONObject().put("id",t.id).put("title",t.title == null ? "Page" : t.title)
-                .put("url",BrowserAddress.canRemember(t.url) ? t.url : "[sign-in or transient page]"));
+                .put("url",BrowserAddress.canRemember(t.url) ? t.url : "[sign-in or transient page]").put("mode",t.desktop?"desktop":"mobile"));
         } catch (Exception ignored) {}
         try { out.put("tabs",list).put("selectedTabId",tabs.selected()); } catch (Exception ignored) {} return out;
     }
@@ -232,8 +279,10 @@ final class AgentWebEngine {
             String js = "JSON.stringify({valid:location.href===" + JSONObject.quote(command.optString("pageUrl")) + "&&[...document.querySelectorAll('a[href]')].some(a=>a.href===" + JSONObject.quote(command.optString("url")) + "&&(a.innerText||a.getAttribute('aria-label')||'').trim().slice(0,300)===" + JSONObject.quote(command.optString("text")) + "&&a.getClientRects().length&&!a.hasAttribute('download'))})";
             eval(js, result -> { if (!current(epoch)) return; if (!result.optBoolean("valid")) { fail("Source page or link changed. Capture again."); return; } navigationStarted = false; web.loadUrl(command.optString("url")); waitForPage(epoch, true); });
         } else if (action.equals("scroll")) {
-            web.evaluateJavascript("window.scrollBy(0," + (command.optString("direction").equals("up") ? "-" : "") + "Math.min(innerHeight,900));", null);
-            main.postDelayed(() -> { if (current(epoch)) waitForPage(epoch, false); }, 500);
+            eval(AgentPageRuntime.scroll(command.optString("direction").equals("up")), result -> {
+                if(!current(epoch))return;scrollResult=result;
+                main.postDelayed(() -> { if(current(epoch))waitForPage(epoch,false); },750);
+            });
         } else waitForPage(epoch, false);
     }
     private void waitForPage(int epoch, boolean navigation) {
@@ -241,14 +290,17 @@ final class AgentWebEngine {
         if (navigationError != null) { fail(navigationError); return; }
         // Wait for the requested URL rather than capturing the old page after a fixed sleep.
         String requested = command.optString("url");
-        String js = "JSON.stringify({url:location.href,ready:document.readyState,text:(document.body?.innerText||'').trim().length})";
-        if (android.os.SystemClock.elapsedRealtime() >= deadline) { fail("Page did not become readable before timeout."); return; }
+        String js = AgentPageRuntime.STATE;
+        if (android.os.SystemClock.elapsedRealtime() >= deadline) { fail("Page content is still loading. The page shell was not returned as a successful read. Keep the browser visible and capture again."); return; }
         inspect = () -> waitForPage(epoch, navigation); main.postDelayed(inspect, 350);
         eval(js, r -> {
             if (!current(epoch) || capturing) return;
+            if(r.optBoolean("blocked")){blocked();return;}
+            String signature=r.optString("signature");long now=android.os.SystemClock.elapsedRealtime();
+            if(!signature.equals(lastSignature)){lastSignature=signature;stableSince=now;}
             boolean moved = !navigation || (navigationStarted && (requested.equals(r.optString("url")) || (web.getProgress() == 100 && !"about:blank".equals(r.optString("url")) && !r.optString("url").isEmpty())));
-            if (moved && !"loading".equals(r.optString("ready")) && r.optInt("text") > 30 && web.getProgress() >= 80) { capture(epoch); return; }
-            if (android.os.SystemClock.elapsedRealtime() >= deadline) { fail("Page did not become readable before timeout."); return; }
+            if (moved && !"loading".equals(r.optString("ready")) && r.optBoolean("meaningful") && now-stableSince>=700 && web.getProgress() >= 80) { capture(epoch); return; }
+            if (android.os.SystemClock.elapsedRealtime() >= deadline) { fail("Page content is still loading. The page shell was not returned as a successful read. Keep the browser visible and capture again."); return; }
         });
     }
     private void capture(int epoch) {
@@ -262,7 +314,7 @@ final class AgentWebEngine {
             eval(AgentPageControls.script(inspectRequest()), controls -> {
                 if(!current(epoch))return;
                 if(controls.optBoolean("blocked")){blocked();return;}
-                try{result.put("pageControls",controls);}catch(Exception ignored){} finish(result);
+                try{result.put("pageControls",controls);if(scrollResult!=null)result.put("scroll",scrollResult);}catch(Exception ignored){} finish(result);
             });
         });
     }
@@ -282,4 +334,5 @@ final class AgentWebEngine {
     void stopCommands() { generation++; if (!dead && web != null) web.stopLoading(); fail("Connection stopped by user."); }
     void destroy() { stopCommands(); ui = null; detach(context.getApplicationContext()); for (WebView page : pages.values()) page.destroy(); pages.clear(); }
 }
+
 

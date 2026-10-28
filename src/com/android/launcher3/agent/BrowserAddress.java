@@ -20,7 +20,8 @@ public final class BrowserAddress {
             String p = u.getPath() == null ? "" : u.getPath();
             String q = u.getQuery() == null ? "" : u.getQuery();
             return !p.matches("(?i).*[/](login|signin|sign-in|auth|oauth|checkout|payment|password|reset|access)(/.*|$)")
-                    && !q.matches("(?i).*(^|&)(code|token|flow_token|access_token|auth_token|password|secret|api_key|nonce|state)=.*");
+                    && !q.matches("(?i).*(^|&)(auth|code|token|flow_token|access_token|refresh_token|auth_token|password|secret|api_key|nonce|state)=.*");
         } catch (Exception e) { return false; }
     }
 }
+
