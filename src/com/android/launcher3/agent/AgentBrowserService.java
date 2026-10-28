@@ -24,6 +24,10 @@ import java.util.concurrent.TimeUnit;
 /** User-visible, sticky connection. Stop always wins; uncertain navigation is never replayed. */
 public class AgentBrowserService extends Service {
     public static final String STOP = "com.voidlauncher.agent.STOP";
+    public static final String OPEN_BROWSER = "com.voidlauncher.agent.OPEN_BROWSER";
+    private static final String CLOSE_BROWSER = "com.voidlauncher.agent.CLOSE_BROWSER";
+    private Runnable closeScreen;
+    void setCloseScreen(Runnable callback) { closeScreen = callback; }
     private static final int ID = 8041;
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ScheduledExecutorService io = Executors.newSingleThreadScheduledExecutor();
@@ -47,14 +51,30 @@ public class AgentBrowserService extends Service {
         receiptFile = new AtomicFile(new File(getNoBackupFilesDir(), "agent-pending-result.json"));
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel("void_agent", "Agent Browser connection", NotificationManager.IMPORTANCE_LOW));
-        foreground("Starting browser connection…");
+        foreground(settings.enabled() ? "Starting browser connection…" : "Browser open · connection off");
         try { engine = new AgentWebEngine(getApplicationContext(), settings); }
         catch (RuntimeException e) { settings.enabled(false); settings.status("WebView could not start. Update Android System WebView, then open Agent Browser."); stopSelf(); return; }
         io.scheduleWithFixedDelay(this::tick, 0, 1, TimeUnit.SECONDS);
     }
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent != null && STOP.equals(intent.getAction())) { stopConnection(); return START_NOT_STICKY; }
-        if (!settings.enabled()) { stopSelf(); return START_NOT_STICKY; }
+        if (intent != null && CLOSE_BROWSER.equals(intent.getAction())) {
+            settings.prefs.edit().putBoolean("browser_open", false).commit();
+            if (closeScreen != null) closeScreen.run();
+            stopConnection(); return START_NOT_STICKY;
+        }
+        if (intent != null && OPEN_BROWSER.equals(intent.getAction())) {
+            settings.prefs.edit().putBoolean("browser_open", true).commit();
+        }
+        if (intent != null && STOP.equals(intent.getAction())) {
+            stopConnection();
+            return settings.prefs.getBoolean("browser_open", false) ? START_STICKY : START_NOT_STICKY;
+        }
+        if (!settings.enabled()) {
+            if (settings.prefs.getBoolean("browser_open", false)) {
+                foreground("Browser open · connection off"); return START_STICKY;
+            }
+            stopSelf(); return START_NOT_STICKY;
+        }
         if (closed) { closed = false; session = false; nextAttempt = 0; }
         return START_STICKY;
     }
@@ -62,10 +82,12 @@ public class AgentBrowserService extends Service {
     private void foreground(String text) {
         PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, AgentBrowserActivity.class), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         PendingIntent stop = PendingIntent.getService(this, 1, new Intent(this, AgentBrowserService.class).setAction(STOP), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent close = PendingIntent.getService(this, 2, new Intent(this, AgentBrowserService.class).setAction(CLOSE_BROWSER), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification n = new Notification.Builder(this, "void_agent").setSmallIcon(android.R.drawable.ic_menu_view)
                 .setContentTitle("VOID Agent Browser").setContentText(text).setContentIntent(open)
                 .setOngoing(true).setOnlyAlertOnce(true).setVisibility(Notification.VISIBILITY_PRIVATE)
-                .addAction(new Notification.Action.Builder(null, "Stop", stop).build()).build();
+                .addAction(new Notification.Action.Builder(null, "Stop agent", stop).build())
+                .addAction(new Notification.Action.Builder(null, "Close browser", close).build()).build();
         if (Build.VERSION.SDK_INT >= 34) startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE); else startForeground(ID, n);
     }
     private void status(String text) { settings.status(text); main.post(() -> { if (!closed) foreground(text); }); }
@@ -148,7 +170,11 @@ public class AgentBrowserService extends Service {
         synchronized (receiptLock) { settings.prefs.edit().remove("inflight").commit(); receiptFile.delete(); }
         settings.status("Stopped by you");
         io.execute(() -> { try { relay.call("/device/session", new JSONObject().put("enabled", false)); } catch (Exception ignored) {} });
-        stopForeground(STOP_FOREGROUND_REMOVE); stopSelf();
+        if (settings.prefs.getBoolean("browser_open", false)) {
+            foreground("Browser open · agent stopped");
+        } else {
+            stopForeground(STOP_FOREGROUND_REMOVE); stopSelf();
+        }
     }
     @Override public void onDestroy() {
         closed = true; if (engine != null) engine.destroy();
