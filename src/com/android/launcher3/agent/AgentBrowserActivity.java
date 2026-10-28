@@ -85,11 +85,16 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
         // Screenshots and screen recording are allowed in the Agent Browser.
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
         getWindow().setStatusBarColor(BG); getWindow().setNavigationBarColor(BG);
-        LinearLayout root=column(); chrome=column(); chrome.setPadding(dp(8),dp(4),dp(8),0); root.addView(chrome);
+        LinearLayout root=column();
+        root.setOnApplyWindowInsetsListener((v,insets)->{
+            v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());
+            return insets;
+        });
+        chrome=column(); chrome.setPadding(dp(8),dp(4),dp(8),0); root.addView(chrome);
         LinearLayout top=row();
         TextView brand=label("VOID",18); brand.setPadding(dp(8),0,dp(8),0); top.addView(brand);
         status=label("Opening…",12); top.addView(status,new LinearLayout.LayoutParams(0,dp(56),1));
-        status.setOnClickListener(v->showConnection());
+        // Connection actions are grouped in Settings.
         chrome.addView(top);
         LinearLayout nav=row();
         address=new EditText(this); address.setSingleLine();address.setTextColor(FG);address.setHintTextColor(Color.GRAY);
