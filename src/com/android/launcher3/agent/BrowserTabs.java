@@ -10,6 +10,7 @@ public final class BrowserTabs {
     public static final class Tab {
         public final int id;
         public String url, title;
+        public boolean desktop;
         Tab(int id, String url, String title) { this.id = id; this.url = url; this.title = title; }
     }
     private final List<Tab> tabs = new ArrayList<>();
@@ -30,3 +31,4 @@ public final class BrowserTabs {
         tabs.remove(index); if (tabs.isEmpty()) { int fresh=next++; tabs.add(new Tab(fresh, "about:blank", "New tab")); selected=fresh; return true; } if (selected == id) selected = tabs.get(Math.max(0, index - 1)).id; return true;
     }
 }
+
