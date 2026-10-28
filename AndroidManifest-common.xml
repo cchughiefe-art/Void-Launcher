@@ -225,6 +225,8 @@
 
         <activity android:name="com.android.launcher3.agent.AgentBrowserActivity"
             android:label="VOID Agent Browser" android:process=":void_agent"
+            android:supportsPictureInPicture="true" android:resizeableActivity="true"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden"
             android:exported="true" android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
