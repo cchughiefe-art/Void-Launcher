@@ -110,7 +110,7 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
         findBar=row();findBar.setVisibility(View.GONE);findText=new EditText(this);findText.setSingleLine();findText.setTextColor(FG);findText.setTextSize(14);findText.setHint("Find in page");findText.setHintTextColor(Color.GRAY);
         findBar.addView(findText,new LinearLayout.LayoutParams(0,dp(42),1));button(findBar,"Find",()->run(()->service.engine().find(findText.getText().toString())));button(findBar,"↓",()->run(()->service.engine().findNext(true)));button(findBar,"×",()->{findBar.setVisibility(View.GONE);run(()->service.engine().clearFind());});chrome.addView(findBar);
         browserHost=new FrameLayout(this);root.addView(browserHost,new LinearLayout.LayoutParams(-1,0,1));root.addView(tools);setContentView(root);
-        browserHost.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(!isInPictureInPictureMode())updatePip();});
+        browserHost.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{resizeBrowserPage();if(!isInPictureInPictureMode())updatePip();});
         if(Build.VERSION.SDK_INT>=33)registerReceiver(hideReceiver,new IntentFilter(HIDE),Context.RECEIVER_NOT_EXPORTED);else registerReceiver(hideReceiver,new IntentFilter(HIDE));receiverRegistered=true;
     }
     @Override protected void onStart(){super.onStart();if(settings==null)return;
@@ -138,7 +138,7 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
     @Override public void onPictureInPictureModeChanged(boolean inPip,Configuration config){
         super.onPictureInPictureModeChanged(inPip,config);if(chrome!=null)chrome.setVisibility(inPip?View.GONE:View.VISIBLE);
         if(bottomBar!=null)bottomBar.setVisibility(inPip?View.GONE:View.VISIBLE);
-        if(!inPip&&service!=null){service.engine().setUi(this);attachBrowser();}if(!inPip)updatePip();
+        if(!inPip&&service!=null){service.engine().setUi(this);attachBrowser();}resizeBrowserPage();if(!inPip)updatePip();
     }
     @Override public void onBackPressed(){if(service!=null&&service.engine().canBack()){run(()->service.engine().back());return;}hideBrowser();}
     private boolean pipSupported(){return getPackageManager().hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE);}
@@ -159,7 +159,19 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
     private void attachBrowser(){
         if(service==null||attaching||service.engine()==null)return;attaching=true;
         try{WebView page=service.engine().view(this);browserHost.removeAllViews();browserHost.addView(page,new FrameLayout.LayoutParams(-1,-1));attachedTab=service.engine().tabs().selected();attachedPage=page;updateToolbar();}
-        finally{attaching=false;}updatePip();
+        finally{attaching=false;}resizeBrowserPage();updatePip();
+    }
+    private void resizeBrowserPage(){
+        if(service==null||attachedPage==null||browserHost==null)return;
+        int width=browserHost.getWidth(),height=browserHost.getHeight();if(width<=0||height<=0)return;
+        AgentWebEngine e=service.engine();
+        int pageWidth=isInPictureInPictureMode()?e.viewportWidth():width;
+        int pageHeight=isInPictureInPictureMode()?e.viewportHeight():height;
+        if(!isInPictureInPictureMode())e.rememberViewport(width,height);
+        android.view.ViewGroup.LayoutParams lp=attachedPage.getLayoutParams();
+        if(lp==null||lp.width!=pageWidth||lp.height!=pageHeight)attachedPage.setLayoutParams(new FrameLayout.LayoutParams(pageWidth,pageHeight));
+        float scale=isInPictureInPictureMode()?Math.min((float)width/pageWidth,(float)height/pageHeight):1f;
+        attachedPage.setPivotX(0);attachedPage.setPivotY(0);attachedPage.setScaleX(scale);attachedPage.setScaleY(scale);
     }
     @Override public void changed(){if(service==null)return;if(attachedTab!=service.engine().tabs().selected() || attachedPage!=service.engine().peekSelectedPage())attachBrowser();else updateToolbar();}
     private void updateToolbar(){if(service==null||service.engine()==null||attaching)return;
@@ -176,13 +188,20 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
             .setNeutralButton("New tab",(d,w)->run(()->{service.engine().newTab("about:blank");attachBrowser();}))
             .setPositiveButton("Close current tab",(d,w)->run(()->{service.engine().closeTab(service.engine().tabs().selected());attachBrowser();})).setNegativeButton("Done",null).show();
     }
-    private void showMenu(){String[] items={"Start agent","Stop agent","Bookmarks","History","Find in page","Share page","Open in system browser","Connection and preferences","Hide browser","Close browser","Reload page","Bookmark this page","Picture in picture","Tabs / new tab"};
+    private void showMenu(){String[] items={"Start agent","Stop agent","Bookmarks","History","Find in page","Share page","Open in system browser","Connection and preferences","Hide browser","Close browser","Reload page","Bookmark this page","Picture in picture","Tabs / new tab","Site mode: "+(service!=null&&service.engine().desktopMode()?"Desktop":"Mobile")};
         new AlertDialog.Builder(this).setTitle("Settings").setItems(items,(d,n)->{switch(n){
             case 0:startConnection();break;case 1:if(service!=null)service.stopConnection();break;case 2:showSaved("browser_bookmarks","Bookmarks");break;case 3:showSaved("browser_history","History");break;
             case 4:findBar.setVisibility(View.VISIBLE);findText.requestFocus();break;case 5:share();break;case 6:if(service!=null)external(service.engine().activeUrl());break;case 7:showSettings();break;case 8:hideBrowser();break;
             case 9:if(service!=null)service.closeBrowser();else closeWindow();break;
-            case 10:run(()->service.engine().reload());break;case 11:bookmark();break;case 12:enterPip();break;case 13:showTabs();break;
+            case 10:run(()->service.engine().reload());break;case 11:bookmark();break;case 12:enterPip();break;case 13:showTabs();break;case 14:showSiteMode();break;
         }}).show();}
+    private void showSiteMode(){
+        if(service==null)return;int current=service.engine().desktopMode()?1:0;
+        new AlertDialog.Builder(this).setTitle("Site mode for this tab").setSingleChoiceItems(new String[]{"Mobile","Desktop"},current,(d,choice)->{
+            d.dismiss();if(choice==current)return;
+            new AlertDialog.Builder(this).setTitle("Reload this tab?").setMessage("Switching site mode reloads the page. Finish or save any unsent form first. Your saved sign-in stays on this browser.").setNegativeButton("Cancel",null).setPositiveButton("Switch",(dialog,which)->run(()->service.engine().setDesktopMode(choice==1))).show();
+        }).setNegativeButton("Cancel",null).show();
+    }
     private void bookmark(){if(service==null)return;String url=service.engine().activeUrl();if(!BrowserAddress.canRemember(url)){toast("Sign-in and transient pages are not saved");return;}
         try{JSONArray a=new JSONArray(settings.prefs.getString("browser_bookmarks","[]"));for(int i=0;i<a.length();i++)if(a.getJSONObject(i).optString("url").equals(url)){toast("Already bookmarked");return;}
             if(a.length()>=100){toast("Bookmark limit reached");return;}a.put(new JSONObject().put("url",url).put("title",service.engine().activeTitle()));settings.prefs.edit().putString("browser_bookmarks",a.toString()).apply();toast("Bookmark saved");}catch(Exception e){toast("Could not save bookmark");}}
@@ -228,3 +247,4 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
     }
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
 }
+
