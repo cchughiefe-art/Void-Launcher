@@ -63,6 +63,7 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
     private Button tabButton, backButton, forwardButton;
     private boolean bound, resumed, attaching, suppressPip, receiverRegistered;
     private int attachedTab=-1;
+    private WebView attachedPage;
     private ValueCallback<Uri[]> fileCallback;
     private WebView filePage;
     private String filePageUrl;
@@ -154,10 +155,10 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
     private void closeWindow(){suppressPip=true;updatePip();finish();}
     private void attachBrowser(){
         if(service==null||attaching||service.engine()==null)return;attaching=true;
-        try{WebView page=service.engine().view(this);browserHost.removeAllViews();browserHost.addView(page,new FrameLayout.LayoutParams(-1,-1));attachedTab=service.engine().tabs().selected();updateToolbar();}
+        try{WebView page=service.engine().view(this);browserHost.removeAllViews();browserHost.addView(page,new FrameLayout.LayoutParams(-1,-1));attachedTab=service.engine().tabs().selected();attachedPage=page;updateToolbar();}
         finally{attaching=false;}updatePip();
     }
-    @Override public void changed(){if(service==null)return;if(attachedTab!=service.engine().tabs().selected())attachBrowser();else updateToolbar();}
+    @Override public void changed(){if(service==null)return;if(attachedTab!=service.engine().tabs().selected() || attachedPage!=service.engine().peekSelectedPage())attachBrowser();else updateToolbar();}
     private void updateToolbar(){if(service==null||service.engine()==null||attaching)return;
         AgentWebEngine e=service.engine();tabButton.setText(String.valueOf(e.tabs().all().size()));
         if(!address.hasFocus()){String url=e.activeUrl();address.setText(url.equals("about:blank")?"":url);}
