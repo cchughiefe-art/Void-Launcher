@@ -51,7 +51,9 @@ jobs:
           node tools/test-agent-capture.cjs
           javac -d "$RUNNER_TEMP/agent-policy" src/com/android/launcher3/agent/AgentPolicy.java src/com/android/launcher3/agent/BrowserAddress.java src/com/android/launcher3/agent/BrowserTabs.java tests/agent/BrowserTabsTest.java
           java -cp "$RUNNER_TEMP/agent-policy" com.android.launcher3.agent.BrowserTabsTest
-          node --test tools/test-agent-controls.cjs
+          node --test tools/test-agent-controls.cjs tools/test-agent-navigation.cjs
+          javac -d "$RUNNER_TEMP/agent-policy" src/com/android/launcher3/agent/AgentPolicy.java src/com/android/launcher3/agent/BrowserAddress.java src/com/android/launcher3/agent/BrowserTabs.java src/com/android/launcher3/agent/BrowserMode.java tests/agent/BrowserModeTest.java
+          java -cp "$RUNNER_TEMP/agent-policy" com.android.launcher3.agent.BrowserModeTest
 
       - name: Build signed release APK
         run: ./gradlew --no-daemon assembleLawnWithQuickstepGithubRelease
@@ -71,3 +73,4 @@ jobs:
       - name: Remove signing material
         if: always()
         run: rm -f keystore.properties "$RUNNER_TEMP/void-launcher-release.jks"
+
