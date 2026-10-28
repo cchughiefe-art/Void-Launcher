@@ -45,6 +45,7 @@ final class AgentWebEngine {
     private BrowserUi ui;
     void setUi(BrowserUi ui) { this.ui = ui; }
     BrowserTabs tabs() { return tabs; }
+    WebView peekSelectedPage() { return pages.get(tabs.selected()); }
     private CompletableFuture<JSONObject> pending;
     private JSONObject command;
     private long deadline;
@@ -268,9 +269,10 @@ final class AgentWebEngine {
     private String inspectRequest() { JSONObject request=new JSONObject(); try{request.put("action","inspect");}catch(Exception ignored){}return request.toString(); }
     private void blocked() { JSONObject e = error("Site restriction encountered; connection stopped."); try { e.put("blocked", true); } catch (Exception ignored) {} finish(e); }
     private void eval(String script, java.util.function.Consumer<JSONObject> callback) {
+        final int evalGeneration=generation;
         web.evaluateJavascript(script, raw -> {
             try { Object v = new JSONTokener(raw).nextValue(); callback.accept(v instanceof String ? new JSONObject((String) v) : new JSONObject()); }
-            catch (Exception e) { fail("Browser returned an unreadable result."); }
+            catch (Exception e) { if(pending!=null && generation==evalGeneration)fail("Browser returned an unreadable result."); }
         });
     }
     private void finish(JSONObject result) { try { result.put("tabId", command != null && command.has("tabId") ? command.getInt("tabId") : findTabId(web)); result.put("tabs",tabInventory().getJSONArray("tabs")); result.put("selectedTabId",tabs.selected()); } catch(Exception ignored) {} if(result.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length>170000) result=error("Capture too large; select a narrower page."); CompletableFuture<JSONObject> f = pending; pending = null; command = null; capturing = false; if (inspect != null) main.removeCallbacks(inspect); if (f != null) f.complete(result); }
