@@ -140,7 +140,7 @@ final def isReleaseBuild = ciBuild
 final def devReleaseName = ciBuild ? "Dev.(#${ciRunNumber})" : "Dev.(${buildCommit})"
 
 final def version = "2"
-final def releaseName = "0.0"
+final def releaseName = "1.0"
 final def versionDisplayName = "${version}.${releaseName}"
 final def majorVersion = versionDisplayName.split("\\.")[0]
 
@@ -154,7 +154,7 @@ android {
          * Lawnchair Launcher 16.0 Beta 1.0
          * see https://docs.lawnchair.app/developers/standards/development-workflow#versioning-scheme
          */
-        versionCode 2_00_00_00
+        versionCode 2_01_00_00
         versionName "${versionDisplayName}"
         buildConfigField "String", "VERSION_DISPLAY_NAME", "\"${versionDisplayName}\""
         buildConfigField "String", "MAJOR_VERSION", "\"${majorVersion}\""
