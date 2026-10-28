@@ -56,7 +56,7 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
     private AgentSettings settings;
     private AgentBrowserService service;
     private FrameLayout browserHost;
-    private LinearLayout chrome, findBar;
+    private LinearLayout chrome, findBar, bottomBar;
     private EditText address, findText;
     private TextView status;
     private ProgressBar progress;
@@ -82,32 +82,30 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
         super.onCreate(state);
         if(Build.VERSION.SDK_INT<28){Toast.makeText(this,"Agent Browser requires Android 9+",Toast.LENGTH_LONG).show();finish();return;}
         settings=new AgentSettings(this);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        // Screenshots and screen recording are allowed in the Agent Browser.
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
         getWindow().setStatusBarColor(BG); getWindow().setNavigationBarColor(BG);
         LinearLayout root=column(); chrome=column(); chrome.setPadding(dp(8),dp(4),dp(8),0); root.addView(chrome);
         LinearLayout top=row();
         TextView brand=label("VOID",18); brand.setPadding(dp(8),0,dp(8),0); top.addView(brand);
-        status=label("Opening…",12); top.addView(status,new LinearLayout.LayoutParams(0,dp(34),1));
+        status=label("Opening…",12); top.addView(status,new LinearLayout.LayoutParams(0,dp(56),1));
         status.setOnClickListener(v->showConnection());
-        tabButton=button(top,"1",this::showTabs); tabButton.setContentDescription("Tabs");
         button(top,"+",()->run(()->{service.engine().newTab("about:blank");attachBrowser();})).setContentDescription("New tab");
-        button(top,"⋮",this::showMenu).setContentDescription("Browser menu"); chrome.addView(top);
+        chrome.addView(top);
         LinearLayout nav=row();
         address=new EditText(this); address.setSingleLine();address.setTextColor(FG);address.setHintTextColor(Color.GRAY);
         address.setTextSize(15);address.setHint("Search or enter HTTPS address");address.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);address.setImeOptions(EditorInfo.IME_ACTION_GO);
         address.setSelectAllOnFocus(true); address.setOnEditorActionListener((v,a,e)->{if(a==EditorInfo.IME_ACTION_GO){navigate();return true;}return false;});
-        nav.addView(address,new LinearLayout.LayoutParams(0,dp(48),1));button(nav,"Go",this::navigate);chrome.addView(nav);
-        LinearLayout tools=row();
-        backButton=button(tools,"‹",()->run(()->service.engine().back()));backButton.setContentDescription("Back");
-        forwardButton=button(tools,"›",()->run(()->service.engine().forward()));forwardButton.setContentDescription("Forward");
-        button(tools,"↻",()->run(()->service.engine().reload())).setContentDescription("Reload");
-        button(tools,"☆",this::bookmark).setContentDescription("Bookmark this page");
-        button(tools,"PiP",this::enterPip).setContentDescription("Picture in picture");
-        button(tools,"Hide",this::hideBrowser);chrome.addView(tools);
+        nav.addView(address,new LinearLayout.LayoutParams(0,dp(56),1));button(nav,"Go",this::navigate);chrome.addView(nav);
+        LinearLayout tools=row(); bottomBar=tools; tools.setPadding(dp(4),dp(4),dp(4),dp(4));
+        backButton=toolbarButton(tools,"‹","Back",()->run(()->service.engine().back()));
+        forwardButton=toolbarButton(tools,"›","Forward",()->run(()->service.engine().forward()));
+        tabButton=toolbarButton(tools,"Tabs 1","Tabs",this::showTabs);
+        toolbarButton(tools,"☰","Browser menu",this::showMenu);
         progress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);chrome.addView(progress,new LinearLayout.LayoutParams(-1,dp(2)));
         findBar=row();findBar.setVisibility(View.GONE);findText=new EditText(this);findText.setSingleLine();findText.setTextColor(FG);findText.setTextSize(14);findText.setHint("Find in page");findText.setHintTextColor(Color.GRAY);
         findBar.addView(findText,new LinearLayout.LayoutParams(0,dp(42),1));button(findBar,"Find",()->run(()->service.engine().find(findText.getText().toString())));button(findBar,"↓",()->run(()->service.engine().findNext(true)));button(findBar,"×",()->{findBar.setVisibility(View.GONE);run(()->service.engine().clearFind());});chrome.addView(findBar);
-        browserHost=new FrameLayout(this);root.addView(browserHost,new LinearLayout.LayoutParams(-1,0,1));setContentView(root);
+        browserHost=new FrameLayout(this);root.addView(browserHost,new LinearLayout.LayoutParams(-1,0,1));root.addView(tools);setContentView(root);
         browserHost.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(!isInPictureInPictureMode())updatePip();});
         if(Build.VERSION.SDK_INT>=33)registerReceiver(hideReceiver,new IntentFilter(HIDE),Context.RECEIVER_NOT_EXPORTED);else registerReceiver(hideReceiver,new IntentFilter(HIDE));receiverRegistered=true;
     }
@@ -135,6 +133,7 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
     @Override protected void onUserLeaveHint(){super.onUserLeaveHint();if(Build.VERSION.SDK_INT<31&&shouldPip())enterPip();}
     @Override public void onPictureInPictureModeChanged(boolean inPip,Configuration config){
         super.onPictureInPictureModeChanged(inPip,config);if(chrome!=null)chrome.setVisibility(inPip?View.GONE:View.VISIBLE);
+        if(bottomBar!=null)bottomBar.setVisibility(inPip?View.GONE:View.VISIBLE);
         if(!inPip&&service!=null){service.engine().setUi(this);attachBrowser();}if(!inPip)updatePip();
     }
     @Override public void onBackPressed(){if(service!=null&&service.engine().canBack()){run(()->service.engine().back());return;}hideBrowser();}
@@ -160,7 +159,7 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
     }
     @Override public void changed(){if(service==null)return;if(attachedTab!=service.engine().tabs().selected() || attachedPage!=service.engine().peekSelectedPage())attachBrowser();else updateToolbar();}
     private void updateToolbar(){if(service==null||service.engine()==null||attaching)return;
-        AgentWebEngine e=service.engine();tabButton.setText(String.valueOf(e.tabs().all().size()));
+        AgentWebEngine e=service.engine();tabButton.setText("Tabs "+e.tabs().all().size());
         if(!address.hasFocus()){String url=e.activeUrl();address.setText(url.equals("about:blank")?"":url);}
         backButton.setEnabled(e.canBack());forwardButton.setEnabled(e.canForward());progress.setProgress(e.progress());progress.setVisibility(e.progress()==100?View.INVISIBLE:View.VISIBLE);
         long last=service.lastContact();boolean fresh=last>0&&System.currentTimeMillis()-last<30000;
@@ -173,11 +172,12 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
             .setNeutralButton("New tab",(d,w)->run(()->{service.engine().newTab("about:blank");attachBrowser();}))
             .setPositiveButton("Close current tab",(d,w)->run(()->{service.engine().closeTab(service.engine().tabs().selected());attachBrowser();})).setNegativeButton("Done",null).show();
     }
-    private void showMenu(){String[] items={"Start agent","Stop agent","Bookmarks","History","Find in page","Share page","Open in system browser","Settings","Hide browser","Close browser"};
+    private void showMenu(){String[] items={"Start agent","Stop agent","Bookmarks","History","Find in page","Share page","Open in system browser","Settings","Hide browser","Close browser","Reload page","Bookmark this page","Picture in picture"};
         new AlertDialog.Builder(this).setTitle("Browser").setItems(items,(d,n)->{switch(n){
             case 0:startConnection();break;case 1:if(service!=null)service.stopConnection();break;case 2:showSaved("browser_bookmarks","Bookmarks");break;case 3:showSaved("browser_history","History");break;
             case 4:findBar.setVisibility(View.VISIBLE);findText.requestFocus();break;case 5:share();break;case 6:if(service!=null)external(service.engine().activeUrl());break;case 7:showSettings();break;case 8:hideBrowser();break;
             case 9:if(service!=null)service.closeBrowser();else closeWindow();break;
+            case 10:run(()->service.engine().reload());break;case 11:bookmark();break;case 12:enterPip();break;
         }}).show();}
     private void bookmark(){if(service==null)return;String url=service.engine().activeUrl();if(!BrowserAddress.canRemember(url)){toast("Sign-in and transient pages are not saved");return;}
         try{JSONArray a=new JSONArray(settings.prefs.getString("browser_bookmarks","[]"));for(int i=0;i<a.length();i++)if(a.getJSONObject(i).optString("url").equals(url)){toast("Already bookmarked");return;}
@@ -215,6 +215,11 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
     private LinearLayout column(){LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.VERTICAL);l.setBackgroundColor(BG);return l;}
     private LinearLayout row(){LinearLayout l=new LinearLayout(this);l.setGravity(Gravity.CENTER_VERTICAL);return l;}
     private TextView label(String text,int size){TextView t=new TextView(this);t.setText(text);t.setTextColor(FG);t.setTextSize(size);return t;}
-    private Button button(LinearLayout parent,String text,Runnable action){Button b=new Button(this);b.setText(text);b.setTextSize(14);b.setTextColor(FG);b.setMinWidth(0);b.setMinimumWidth(0);b.setPadding(dp(9),0,dp(9),0);b.setOnClickListener(v->action.run());parent.addView(b,new LinearLayout.LayoutParams(-2,dp(40)));return b;}
+    private Button button(LinearLayout parent,String text,Runnable action){Button b=new Button(this);b.setText(text);b.setTextSize(14);b.setTextColor(FG);b.setMinWidth(dp(56));b.setMinimumWidth(dp(56));b.setMinHeight(dp(56));b.setMinimumHeight(dp(56));b.setPadding(dp(12),0,dp(12),0);b.setOnClickListener(v->action.run());parent.addView(b,new LinearLayout.LayoutParams(-2,dp(56)));return b;}
+    private Button toolbarButton(LinearLayout parent,String text,String description,Runnable action){
+        Button b=new Button(this);b.setText(text);b.setTextSize(text.startsWith("Tabs")?16:26);b.setTextColor(FG);
+        b.setContentDescription(description);b.setMinWidth(0);b.setMinimumWidth(0);b.setMinHeight(dp(56));b.setMinimumHeight(dp(56));b.setPadding(dp(4),0,dp(4),0);
+        b.setOnClickListener(v->action.run());LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(56),1);p.setMargins(dp(3),0,dp(3),0);parent.addView(b,p);return b;
+    }
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
 }
