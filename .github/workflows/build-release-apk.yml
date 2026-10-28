@@ -49,6 +49,9 @@ jobs:
           javac -d "$RUNNER_TEMP/agent-policy" src/com/android/launcher3/agent/AgentPolicy.java tests/agent/AgentPolicyTest.java
           java -cp "$RUNNER_TEMP/agent-policy" com.android.launcher3.agent.AgentPolicyTest
           node tools/test-agent-capture.cjs
+          javac -d "$RUNNER_TEMP/agent-policy" src/com/android/launcher3/agent/AgentPolicy.java src/com/android/launcher3/agent/BrowserAddress.java src/com/android/launcher3/agent/BrowserTabs.java tests/agent/BrowserTabsTest.java
+          java -cp "$RUNNER_TEMP/agent-policy" com.android.launcher3.agent.BrowserTabsTest
+          node --test tools/test-agent-controls.cjs
 
       - name: Build signed release APK
         run: ./gradlew --no-daemon assembleLawnWithQuickstepGithubRelease

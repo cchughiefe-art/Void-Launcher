@@ -24,6 +24,11 @@ import java.util.concurrent.TimeUnit;
 /** User-visible, sticky connection. Stop always wins; uncertain navigation is never replayed. */
 public class AgentBrowserService extends Service {
     public static final String STOP = "com.voidlauncher.agent.STOP";
+    public void closeBrowser() {
+        settings.prefs.edit().putBoolean("browser_open", false).commit();
+        if (closeScreen != null) closeScreen.run();
+        stopConnection();
+    }
     public static final String OPEN_BROWSER = "com.voidlauncher.agent.OPEN_BROWSER";
     private static final String CLOSE_BROWSER = "com.voidlauncher.agent.CLOSE_BROWSER";
     private Runnable closeScreen;
@@ -58,9 +63,7 @@ public class AgentBrowserService extends Service {
     }
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && CLOSE_BROWSER.equals(intent.getAction())) {
-            settings.prefs.edit().putBoolean("browser_open", false).commit();
-            if (closeScreen != null) closeScreen.run();
-            stopConnection(); return START_NOT_STICKY;
+            closeBrowser(); return START_NOT_STICKY;
         }
         if (intent != null && OPEN_BROWSER.equals(intent.getAction())) {
             settings.prefs.edit().putBoolean("browser_open", true).commit();
@@ -80,12 +83,13 @@ public class AgentBrowserService extends Service {
     }
     @Override public IBinder onBind(Intent intent) { return binder; }
     private void foreground(String text) {
-        PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, AgentBrowserActivity.class), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, AgentBrowserActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         PendingIntent stop = PendingIntent.getService(this, 1, new Intent(this, AgentBrowserService.class).setAction(STOP), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         PendingIntent close = PendingIntent.getService(this, 2, new Intent(this, AgentBrowserService.class).setAction(CLOSE_BROWSER), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification n = new Notification.Builder(this, "void_agent").setSmallIcon(android.R.drawable.ic_menu_view)
                 .setContentTitle("VOID Agent Browser").setContentText(text).setContentIntent(open)
                 .setOngoing(true).setOnlyAlertOnce(true).setVisibility(Notification.VISIBILITY_PRIVATE)
+                .addAction(new Notification.Action.Builder(null, "Reveal browser", open).build())
                 .addAction(new Notification.Action.Builder(null, "Stop agent", stop).build())
                 .addAction(new Notification.Action.Builder(null, "Close browser", close).build()).build();
         if (Build.VERSION.SDK_INT >= 34) startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE); else startForeground(ID, n);
@@ -186,3 +190,4 @@ public class AgentBrowserService extends Service {
         super.onTaskRemoved(rootIntent);
     }
 }
+
