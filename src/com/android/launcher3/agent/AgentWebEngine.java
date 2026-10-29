@@ -198,6 +198,18 @@ final class AgentWebEngine {
     void findNext(boolean next) { selectedPage().findNext(next); }
     void clearFind() { selectedPage().clearMatches(); }
     private void checkManual() { if (pending != null && pages.get(tabs.selected()) == web) throw new IllegalStateException("This tab is being read by the agent. Other tabs remain available."); }
+    /** Native password-manager handoff; credentials never enter agent commands or receipts. */
+    void requestPasswordAutofill() {
+        checkManual();
+        WebView page = selectedPage();
+        AgentPolicy.publicUrl(page.getUrl());
+        if (!page.isAttachedToWindow()) throw new IllegalStateException("Open this tab before using password autofill.");
+        android.view.autofill.AutofillManager manager = context.getSystemService(android.view.autofill.AutofillManager.class);
+        if (manager == null || !manager.isEnabled()) throw new IllegalStateException("Enable an Android password manager in system Autofill settings first.");
+        page.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_YES);
+        page.requestFocus();
+        manager.requestAutofill(page);
+    }
     void navigateLocal(String url) {
         checkManual(); WebView page = selectedPage();
         if (url.equals("about:blank")) startPage(page); else page.loadUrl(AgentPolicy.browserUrl(url));
@@ -319,7 +331,11 @@ final class AgentWebEngine {
         });
     }
     private String inspectRequest() { JSONObject request=new JSONObject(); try{request.put("action","inspect");}catch(Exception ignored){}return request.toString(); }
-    private void blocked() { JSONObject e = error("Site restriction encountered; connection stopped."); try { e.put("blocked", true); } catch (Exception ignored) {} finish(e); }
+    private void blocked() {
+        JSONObject e = error("Site restriction encountered. Resolve it in the browser, then explicitly resume the agent. Interrupted actions are not replayed.");
+        try { e.put("blocked", true).put("status", "paused_verification").put("requiresUser", true).put("retrySafe", false); } catch (Exception ignored) {}
+        finish(e);
+    }
     private void eval(String script, java.util.function.Consumer<JSONObject> callback) {
         final int evalGeneration=generation;
         web.evaluateJavascript(script, raw -> {
@@ -334,5 +350,3 @@ final class AgentWebEngine {
     void stopCommands() { generation++; if (!dead && web != null) web.stopLoading(); fail("Connection stopped by user."); }
     void destroy() { stopCommands(); ui = null; detach(context.getApplicationContext()); for (WebView page : pages.values()) page.destroy(); pages.clear(); }
 }
-
-
