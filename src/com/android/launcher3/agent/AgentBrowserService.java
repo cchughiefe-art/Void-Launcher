@@ -131,7 +131,7 @@ public class AgentBrowserService extends Service {
             finally { if (commandWake.isHeld()) commandWake.release(); }
             if (closed || !settings.enabled()) return;
             saveReceipt(id, result); deliverPending(); failures = 0;
-            if (result.optBoolean("blocked")) { main.post(this::stopConnection); return; }
+            if (result.optBoolean("blocked")) { main.post(this::pauseForVerification); return; }
             status(result.has("error") ? "Command stopped · open browser for details" : "Connected · result received");
         } catch (Exception e) {
             session = false; failures = Math.min(failures + 1, 6);
@@ -167,11 +167,18 @@ public class AgentBrowserService extends Service {
         }
         synchronized (receiptLock) { settings.prefs.edit().putString("completed", id).remove("inflight").commit(); receiptFile.delete(); }
     }
+    private void pauseForVerification() {
+        stopConnection();
+        settings.prefs.edit().putBoolean("verification_paused", true).commit();
+        settings.status("Verification required · resolve in browser, then Resume agent");
+        if (settings.prefs.getBoolean("browser_open", false)) foreground("Verification required · agent paused");
+    }
     public void stopConnection() {
         settings.enabled(false); closed = true;
         if (engine != null) engine.stopCommands();
         // Clear local intent synchronously before any asynchronous network operation.
         synchronized (receiptLock) { settings.prefs.edit().remove("inflight").commit(); receiptFile.delete(); }
+        settings.prefs.edit().remove("verification_paused").commit();
         settings.status("Stopped by you");
         io.execute(() -> { try { relay.call("/device/session", new JSONObject().put("enabled", false)); } catch (Exception ignored) {} });
         if (settings.prefs.getBoolean("browser_open", false)) {
@@ -190,4 +197,3 @@ public class AgentBrowserService extends Service {
         super.onTaskRemoved(rootIntent);
     }
 }
-
