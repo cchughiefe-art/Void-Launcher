@@ -179,7 +179,7 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
         if(!address.hasFocus()){String url=e.activeUrl();address.setText(url.equals("about:blank")?"":url);}
         backButton.setEnabled(e.canBack());forwardButton.setEnabled(e.canForward());progress.setProgress(e.progress());progress.setVisibility(e.progress()==100?View.INVISIBLE:View.VISIBLE);
         long last=service.lastContact();boolean fresh=last>0&&System.currentTimeMillis()-last<30000;
-        status.setText(settings.enabled()?(fresh?"● Connected":"● Connecting…"):"○ Agent off");
+        status.setText(settings.prefs.getBoolean("verification_paused",false)?"○ Verification paused":settings.enabled()?(fresh?"● Connected":"● Connecting…"):"○ Agent off");
     }
     private void navigate(){run(()->{String url=BrowserAddress.resolve(address.getText().toString());address.clearFocus();((android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(address.getWindowToken(),0);service.engine().navigateLocal(url);});}
     private void showTabs(){if(service==null)return;java.util.List<BrowserTabs.Tab> tabs=service.engine().tabs().all();String[] labels=new String[tabs.size()];int selected=0;
@@ -188,12 +188,12 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
             .setNeutralButton("New tab",(d,w)->run(()->{service.engine().newTab("about:blank");attachBrowser();}))
             .setPositiveButton("Close current tab",(d,w)->run(()->{service.engine().closeTab(service.engine().tabs().selected());attachBrowser();})).setNegativeButton("Done",null).show();
     }
-    private void showMenu(){String[] items={"Start agent","Stop agent","Bookmarks","History","Find in page","Share page","Open in system browser","Connection and preferences","Hide browser","Close browser","Reload page","Bookmark this page","Picture in picture","Tabs / new tab","Site mode: "+(service!=null&&service.engine().desktopMode()?"Desktop":"Mobile")};
+    private void showMenu(){String[] items={settings.prefs.getBoolean("verification_paused",false)?"Resume agent after verification":"Start agent","Stop agent","Bookmarks","History","Find in page","Share page","Open in system browser","Connection and preferences","Hide browser","Close browser","Reload page","Bookmark this page","Picture in picture","Tabs / new tab","Site mode: "+(service!=null&&service.engine().desktopMode()?"Desktop":"Mobile"),"Password autofill"};
         new AlertDialog.Builder(this).setTitle("Settings").setItems(items,(d,n)->{switch(n){
             case 0:startConnection();break;case 1:if(service!=null)service.stopConnection();break;case 2:showSaved("browser_bookmarks","Bookmarks");break;case 3:showSaved("browser_history","History");break;
             case 4:findBar.setVisibility(View.VISIBLE);findText.requestFocus();break;case 5:share();break;case 6:if(service!=null)external(service.engine().activeUrl());break;case 7:showSettings();break;case 8:hideBrowser();break;
             case 9:if(service!=null)service.closeBrowser();else closeWindow();break;
-            case 10:run(()->service.engine().reload());break;case 11:bookmark();break;case 12:enterPip();break;case 13:showTabs();break;case 14:showSiteMode();break;
+            case 10:run(()->service.engine().reload());break;case 11:bookmark();break;case 12:enterPip();break;case 13:showTabs();break;case 14:showSiteMode();break;case 15:run(()->service.engine().requestPasswordAutofill());break;
         }}).show();}
     private void showSiteMode(){
         if(service==null)return;int current=service.engine().desktopMode()?1:0;
@@ -223,7 +223,7 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
         callback.onReceiveValue(files.isEmpty()?null:files.toArray(new Uri[0]));filePage=null;suppressPip=false;updatePip();
     }
     private void showConnection(){new AlertDialog.Builder(this).setTitle("Agent connection").setMessage(settings.prefs.getString("status","Off")+"\nThe agent can list and target every tab. Captures go through your relay into your private void-x-bot repository.").setPositiveButton("Start",(d,w)->startConnection()).setNeutralButton("Stop",(d,w)->{if(service!=null)service.stopConnection();}).setNegativeButton("Done",null).show();}
-    private void startConnection(){try{if(settings.deviceKey().isEmpty()){showSettings();return;}if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){suppressPip=true;updatePip();requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},8042);return;}settings.enabled(true);settings.status("Connecting…");startForegroundService(new Intent(this,AgentBrowserService.class));}catch(Exception e){settings.enabled(false);toast("Could not start. Check the saved device key.");}}
+    private void startConnection(){try{if(settings.deviceKey().isEmpty()){showSettings();return;}if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){suppressPip=true;updatePip();requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},8042);return;}settings.prefs.edit().remove("verification_paused").commit();settings.enabled(true);settings.status("Connecting…");startForegroundService(new Intent(this,AgentBrowserService.class));}catch(Exception e){settings.enabled(false);toast("Could not start. Check the saved device key.");}}
     @Override public void onRequestPermissionsResult(int r,String[] p,int[] results){super.onRequestPermissionsResult(r,p,results);suppressPip=false;if(r==8042&&results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED)startConnection();updatePip();}
     private void showSettings(){LinearLayout box=column();box.setPadding(dp(18),dp(8),dp(18),0);TextView note=label("Save the existing device key once. Relay discovery is automatic. Agent access covers all tabs. Enable page actions below to allow filling fields, clicking buttons and publishing. Passwords and verification codes remain manual.",14);box.addView(note);
         EditText key=new EditText(this);key.setTextColor(FG);key.setHintTextColor(Color.GRAY);key.setHint("Device key · blank keeps saved key");key.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);key.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);box.addView(key);
@@ -247,4 +247,3 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
     }
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
 }
-
