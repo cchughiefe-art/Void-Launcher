@@ -140,6 +140,7 @@ final class AgentWebEngine {
         });
         page.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
+                if (!networkReady) { settings.status("Proxy unavailable: navigation blocked."); return true; }
                 try { AgentPolicy.browserUrl(r.getUrl().toString()); return false; }
                 catch (Exception e) { settings.status("Blocked unsupported navigation."); return true; }
             }
@@ -225,6 +226,7 @@ final class AgentWebEngine {
     }
     boolean desktopMode(){return tabs.get(tabs.selected()).desktop;}
     void setDesktopMode(boolean desktop) {
+        if (!networkReady) throw new IllegalStateException("Browser proxy unavailable.");
         checkManual();int id=tabs.selected();WebView page=selectedPage();
         if(tabs.get(id).desktop==desktop)return;
         tabs.get(id).desktop=desktop;applyMode(page,id);saveTabs();
@@ -237,9 +239,9 @@ final class AgentWebEngine {
     int progress() { return selectedPage().getProgress(); }
     boolean canBack() { return selectedPage().canGoBack(); }
     boolean canForward() { return selectedPage().canGoForward(); }
-    void back() { checkManual(); if (canBack()) selectedPage().goBack(); }
-    void forward() { checkManual(); if (canForward()) selectedPage().goForward(); }
-    void reload() { checkManual(); selectedPage().reload(); }
+    void back() { if (!networkReady) throw new IllegalStateException("Browser proxy unavailable."); checkManual(); if (canBack()) selectedPage().goBack(); }
+    void forward() { if (!networkReady) throw new IllegalStateException("Browser proxy unavailable."); checkManual(); if (canForward()) selectedPage().goForward(); }
+    void reload() { if (!networkReady) throw new IllegalStateException("Browser proxy unavailable."); checkManual(); selectedPage().reload(); }
     void find(String term) { selectedPage().findAllAsync(term); }
     void findNext(boolean next) { selectedPage().findNext(next); }
     void clearFind() { selectedPage().clearMatches(); }
