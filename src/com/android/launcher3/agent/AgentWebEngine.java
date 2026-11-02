@@ -18,6 +18,9 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.RenderProcessGoneDetail;
+import androidx.webkit.ProxyConfig;
+import androidx.webkit.ProxyController;
+import androidx.webkit.WebViewFeature;
 import java.util.HashMap;
 import java.util.Map;
 import android.view.View;
@@ -34,6 +37,10 @@ final class AgentWebEngine {
     private final MutableContextWrapper context;
     private final AgentSettings settings;
     private WebView web;
+    // Apply routing before loading any persisted URL; fail closed if the proxy cannot start.
+    private volatile boolean networkReady;
+    private boolean disposed;
+    private final Map<WebView, String> deferredInitialUrls = new HashMap<>();
     private final Map<Integer, WebView> pages = new HashMap<>();
     private final java.util.Set<Integer> failedPages = new java.util.HashSet<>();
     private BrowserTabs tabs;
@@ -74,7 +81,42 @@ final class AgentWebEngine {
             int selected = settings.prefs.getInt("browser_selected", BrowserTabs.AGENT);
             try { tabs.select(selected); } catch (Exception ignored) { tabs.select(BrowserTabs.AGENT); }
         } catch (Exception ignored) { tabs.select(BrowserTabs.AGENT); }
+        // Set the WebView data directory suffix before AndroidX probes the WebView provider.
+        AgentSettings.prepareWeb();
+        configureNetwork();
         web = createPage(BrowserTabs.AGENT);
+    }
+    private void configureNetwork() {
+        boolean enabled = settings.prefs.getBoolean("proxy_enabled", false);
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)) {
+            networkReady = !enabled;
+            if (enabled) settings.status("Proxy unavailable in this WebView. Navigation blocked.");
+            return;
+        }
+        try {
+            ProxyController controller = ProxyController.getInstance();
+            java.util.concurrent.Executor executor = task -> main.post(task);
+            Runnable applied = () -> {
+                if (disposed) return;
+                networkReady = true;
+                Map<WebView, String> restore = new HashMap<>(deferredInitialUrls);
+                deferredInitialUrls.clear();
+                for (Map.Entry<WebView, String> item : restore.entrySet()) {
+                    if (pages.containsValue(item.getKey())) item.getKey().loadUrl(item.getValue());
+                }
+                changed();
+            };
+            if (enabled) {
+                String rule = BrowserRegionSettings.proxyRule(settings.prefs.getString("proxy_address", ""));
+                // Never add a direct-connection fallback.
+                controller.setProxyOverride(new ProxyConfig.Builder().addProxyRule(rule).build(), executor, applied);
+            } else {
+                controller.clearProxyOverride(executor, applied);
+            }
+        } catch (Exception e) {
+            networkReady = false;
+            settings.status("Proxy setup failed. Page loading blocked until routing is corrected.");
+        }
     }
     private WebView createPage(int id) {
         AgentSettings.prepareWeb();
@@ -84,6 +126,7 @@ final class AgentWebEngine {
         s.setJavaScriptCanOpenWindowsAutomatically(false); s.setSupportMultipleWindows(false);
         applyMode(page,id);
         s.setMediaPlaybackRequiresUserGesture(true); s.setGeolocationEnabled(false); s.setSaveFormData(false);
+        BrowserRegionSettings.installGeolocation(page, settings);
         CookieManager.getInstance().setAcceptCookie(true); CookieManager.getInstance().setAcceptThirdPartyCookies(page, false);
         page.setDownloadListener((url, ua, disposition, mime, size) -> {
             if (ui != null && tabs.selected() == id) ui.download(url);
@@ -97,10 +140,12 @@ final class AgentWebEngine {
         });
         page.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
+                if (!networkReady) { settings.status("Proxy unavailable: navigation blocked."); return true; }
                 try { AgentPolicy.browserUrl(r.getUrl().toString()); return false; }
                 catch (Exception e) { settings.status("Blocked unsupported navigation."); return true; }
             }
             @Override public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
+                if (!networkReady) return new WebResourceResponse("text/plain", "UTF-8", new ByteArrayInputStream(new byte[0]));
                 String scheme = r.getUrl().getScheme();
                 if ("data".equals(scheme) || "blob".equals(scheme)) return null;
                 try { AgentPolicy.browserUrl(r.getUrl().toString()); return null; }
@@ -115,7 +160,7 @@ final class AgentWebEngine {
             }
             @Override public void onPageCommitVisible(WebView v,String url) { if(pages.get(id)==v) applyDesktopViewport(v,id); }
             @Override public void onPageFinished(WebView v, String url) {
-                if (pages.get(id) != v) return;
+                if (pages.get(id) != v || deferredInitialUrls.containsKey(v)) return;
                 applyDesktopViewport(v,id);
                 BrowserTabs.Tab t = tabs.get(id); t.url = url == null ? "about:blank" : url;
                 t.title = v.getTitle() == null ? "Page" : v.getTitle();
@@ -132,7 +177,9 @@ final class AgentWebEngine {
         });
         prepareDetached(page);
         String initial = tabs.get(id).url;
-        if (initial.equals("about:blank")) startPage(page); else page.loadUrl(initial);
+        if (initial.equals("about:blank")) startPage(page);
+        else if (networkReady) page.loadUrl(initial);
+        else { deferredInitialUrls.put(page, initial); startPage(page); }
         return page;
     }
     private void changed() { if (ui != null) ui.changed(); }
@@ -179,6 +226,7 @@ final class AgentWebEngine {
     }
     boolean desktopMode(){return tabs.get(tabs.selected()).desktop;}
     void setDesktopMode(boolean desktop) {
+        if (!networkReady) throw new IllegalStateException("Browser proxy unavailable.");
         checkManual();int id=tabs.selected();WebView page=selectedPage();
         if(tabs.get(id).desktop==desktop)return;
         tabs.get(id).desktop=desktop;applyMode(page,id);saveTabs();
@@ -191,14 +239,15 @@ final class AgentWebEngine {
     int progress() { return selectedPage().getProgress(); }
     boolean canBack() { return selectedPage().canGoBack(); }
     boolean canForward() { return selectedPage().canGoForward(); }
-    void back() { checkManual(); if (canBack()) selectedPage().goBack(); }
-    void forward() { checkManual(); if (canForward()) selectedPage().goForward(); }
-    void reload() { checkManual(); selectedPage().reload(); }
+    void back() { if (!networkReady) throw new IllegalStateException("Browser proxy unavailable."); checkManual(); if (canBack()) selectedPage().goBack(); }
+    void forward() { if (!networkReady) throw new IllegalStateException("Browser proxy unavailable."); checkManual(); if (canForward()) selectedPage().goForward(); }
+    void reload() { if (!networkReady) throw new IllegalStateException("Browser proxy unavailable."); checkManual(); selectedPage().reload(); }
     void find(String term) { selectedPage().findAllAsync(term); }
     void findNext(boolean next) { selectedPage().findNext(next); }
     void clearFind() { selectedPage().clearMatches(); }
     private void checkManual() { if (pending != null && pages.get(tabs.selected()) == web) throw new IllegalStateException("This tab is being read by the agent. Other tabs remain available."); }
     void navigateLocal(String url) {
+        if (!networkReady) throw new IllegalStateException("Browser proxy starting or unavailable; check Location & proxy settings.");
         checkManual(); WebView page = selectedPage();
         if (url.equals("about:blank")) startPage(page); else page.loadUrl(AgentPolicy.browserUrl(url));
     }
@@ -242,6 +291,7 @@ final class AgentWebEngine {
                 if (action.equals("select_tab")) { selectTab(targetId); changed(); f.complete(tabInventory()); return; }
                 if (action.equals("close_tab")) { closeTab(targetId); changed(); f.complete(tabInventory()); return; }
                 if (!action.equals("open") && !action.equals("capture") && !action.equals("scroll") && !action.equals("click_link") && !action.equals("fill") && !action.equals("click") && !action.equals("submit")) throw new IllegalArgumentException("Unsupported action");
+                if (!networkReady) { f.complete(error("Proxy not ready. Remote browsing blocked until routing succeeds.")); return; }
                 if (failedPages.contains(targetId)) throw new IllegalStateException("Tab renderer stopped. Select that tab to recover.");
                 web = pages.get(targetId); if (web == null) web = createPage(targetId); dead = false;
                 if (action.equals("open") || action.equals("click_link")) AgentPolicy.publicUrl(c.getString("url"));
@@ -332,7 +382,7 @@ final class AgentWebEngine {
     private void fail(String message) { finish(error(message)); }
     static JSONObject error(String message) { JSONObject j = new JSONObject(); try { j.put("error", message).put("at", System.currentTimeMillis()); } catch (Exception ignored) {} return j; }
     void stopCommands() { generation++; if (!dead && web != null) web.stopLoading(); fail("Connection stopped by user."); }
-    void destroy() { stopCommands(); ui = null; detach(context.getApplicationContext()); for (WebView page : pages.values()) page.destroy(); pages.clear(); }
+    void destroy() { disposed = true; stopCommands(); ui = null; detach(context.getApplicationContext()); for (WebView page : pages.values()) page.destroy(); pages.clear(); deferredInitialUrls.clear(); }
 }
 
 

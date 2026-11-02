@@ -188,13 +188,81 @@ public class AgentBrowserActivity extends Activity implements AgentWebEngine.Bro
             .setNeutralButton("New tab",(d,w)->run(()->{service.engine().newTab("about:blank");attachBrowser();}))
             .setPositiveButton("Close current tab",(d,w)->run(()->{service.engine().closeTab(service.engine().tabs().selected());attachBrowser();})).setNegativeButton("Done",null).show();
     }
-    private void showMenu(){String[] items={"Start agent","Stop agent","Bookmarks","History","Find in page","Share page","Open in system browser","Connection and preferences","Hide browser","Close browser","Reload page","Bookmark this page","Picture in picture","Tabs / new tab","Site mode: "+(service!=null&&service.engine().desktopMode()?"Desktop":"Mobile")};
+    private void showMenu(){String[] items={"Start agent","Stop agent","Bookmarks","History","Find in page","Share page","Open in system browser","Connection and preferences","Hide browser","Close browser","Reload page","Bookmark this page","Picture in picture","Tabs / new tab","Site mode: "+(service!=null&&service.engine().desktopMode()?"Desktop":"Mobile"),"Location & IP proxy"};
         new AlertDialog.Builder(this).setTitle("Settings").setItems(items,(d,n)->{switch(n){
             case 0:startConnection();break;case 1:if(service!=null)service.stopConnection();break;case 2:showSaved("browser_bookmarks","Bookmarks");break;case 3:showSaved("browser_history","History");break;
             case 4:findBar.setVisibility(View.VISIBLE);findText.requestFocus();break;case 5:share();break;case 6:if(service!=null)external(service.engine().activeUrl());break;case 7:showSettings();break;case 8:hideBrowser();break;
             case 9:if(service!=null)service.closeBrowser();else closeWindow();break;
-            case 10:run(()->service.engine().reload());break;case 11:bookmark();break;case 12:enterPip();break;case 13:showTabs();break;case 14:showSiteMode();break;
+            case 10:run(()->service.engine().reload());break;case 11:bookmark();break;case 12:enterPip();break;case 13:showTabs();break;case 14:showSiteMode();break;case 15:showRegionSettings();break;
         }}).show();}
+    /** Opt-in WebView-only geolocation and HTTP/SOCKS browser routing. */
+    private void showRegionSettings() {
+        LinearLayout box = column(); box.setPadding(dp(18), dp(8), dp(18), 0);
+        TextView note = label("These options affect pages in VOID Agent Browser only, not Android's physical GPS, SIM, account region or payout eligibility. A proxy needs a working server you trust; do not use unknown free proxies.", 14);
+        box.addView(note);
+        CheckBox geo = new CheckBox(this);
+        geo.setText("Override webpage GPS (test coordinates)");
+        geo.setTextColor(FG); geo.setMinHeight(dp(52));
+        geo.setChecked(settings.prefs.getBoolean("geo_override_enabled", false));
+        box.addView(geo);
+        TextView latitudeLabel = label("Latitude (New York default: 40.7128)", 13); box.addView(latitudeLabel);
+        EditText latitude = new EditText(this);
+        latitude.setTextColor(FG); latitude.setSingleLine();
+        latitude.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
+        latitude.setText(settings.prefs.getString("geo_latitude", "40.7128"));
+        box.addView(latitude);
+        TextView longitudeLabel = label("Longitude (New York default: -74.0060)", 13); box.addView(longitudeLabel);
+        EditText longitude = new EditText(this);
+        longitude.setTextColor(FG); longitude.setSingleLine();
+        longitude.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
+        longitude.setText(settings.prefs.getString("geo_longitude", "-74.0060"));
+        box.addView(longitude);
+        CheckBox proxy = new CheckBox(this);
+        proxy.setText("Route webpages through my proxy");
+        proxy.setTextColor(FG); proxy.setMinHeight(dp(52));
+        proxy.setChecked(settings.prefs.getBoolean("proxy_enabled", false));
+        box.addView(proxy);
+        TextView proxyLabel = label("Proxy URL (HTTP, HTTPS or SOCKS; no login)", 13); box.addView(proxyLabel);
+        EditText proxyAddress = new EditText(this);
+        proxyAddress.setTextColor(FG); proxyAddress.setSingleLine();
+        proxyAddress.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        proxyAddress.setHint("socks://proxy.example.net:1080");
+        proxyAddress.setHintTextColor(Color.GRAY);
+        proxyAddress.setText(settings.prefs.getString("proxy_address", ""));
+        box.addView(proxyAddress);
+        TextView footnote = label("Changes reopen browser tabs and stop the agent session. Browser-only proxy does not cover the agent relay or other Android apps. If proxy setup fails, web navigation is blocked.", 13);
+        box.addView(footnote);
+        ScrollView scroll = new ScrollView(this); scroll.setFillViewport(true); scroll.addView(box);
+        suppressPip = true; updatePip();
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("Location & IP proxy")
+                .setView(scroll).setNegativeButton("Cancel", null).setPositiveButton("Save & restart browser", null).create();
+        dialog.setOnDismissListener(d -> { suppressPip = false; updatePip(); });
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            try {
+                String lat = latitude.getText().toString().trim();
+                String lon = longitude.getText().toString().trim();
+                // Validate saved values even when the toggle is off.
+                BrowserRegionSettings.coordinate(lat, -90, 90);
+                BrowserRegionSettings.coordinate(lon, -180, 180);
+                String route = proxyAddress.getText().toString().trim();
+                if (proxy.isChecked()) BrowserRegionSettings.proxyRule(route);
+                settings.prefs.edit().putBoolean("geo_override_enabled", geo.isChecked())
+                        .putString("geo_latitude", lat).putString("geo_longitude", lon)
+                        .putBoolean("proxy_enabled", proxy.isChecked()).putString("proxy_address", route).commit();
+                if (service != null) {
+                    service.rebuildBrowserEngine();
+                    service.engine().setUi(this);
+                    attachedPage = null; attachedTab = -1;
+                    attachBrowser();
+                }
+                dialog.dismiss();
+                toast("Browser routing saved. Agent stopped; restart it when ready.");
+            } catch (Exception e) {
+                toast(e.getMessage() == null ? "Invalid location or proxy" : e.getMessage());
+            }
+        }));
+        dialog.show();
+    }
     private void showSiteMode(){
         if(service==null)return;int current=service.engine().desktopMode()?1:0;
         new AlertDialog.Builder(this).setTitle("Site mode for this tab").setSingleChoiceItems(new String[]{"Mobile","Desktop"},current,(d,choice)->{

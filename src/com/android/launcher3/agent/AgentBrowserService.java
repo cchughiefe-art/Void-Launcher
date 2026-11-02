@@ -51,6 +51,13 @@ public class AgentBrowserService extends Service {
     private PowerManager.WakeLock commandWake;
     public class LocalBinder extends Binder { AgentBrowserService service() { return AgentBrowserService.this; } }
     AgentWebEngine engine() { return engine; }
+    /** Called after the user saves location / proxy preferences. Active remote work is stopped. */
+    void rebuildBrowserEngine() {
+        stopConnection();
+        if (engine != null) engine.destroy();
+        settings.status("Reinitializing browser routing. Start agent again after setup.");
+        engine = new AgentWebEngine(getApplicationContext(), settings);
+    }
     @Override public void onCreate() {
         super.onCreate(); settings = new AgentSettings(this); relay = new AgentRelay(settings);
         receiptFile = new AtomicFile(new File(getNoBackupFilesDir(), "agent-pending-result.json"));

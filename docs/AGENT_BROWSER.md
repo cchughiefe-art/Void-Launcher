@@ -48,6 +48,20 @@ Tab URLs are restored lazily after process restart. In-memory form state cannot 
 
 The bridge stops on site restrictions and never bypasses TLS validation, challenges or Android restrictions. It has no arbitrary script execution, credential extraction, automatic payment or filesystem-read API. Downloads are confirmed and handed to the system browser; its login/download manager applies. Browser file selection is manual through Android's document picker. Chrome extension installation and Chrome account sync are not included.
 
+
+## Location & IP proxy (opt-in)
+In the Agent Browser, open **Settings → Location & IP proxy**.
+
+- **Override webpage GPS**: enter latitude/longitude. The default example is New York City (40.7128, -74.0060). The browser injects a test implementation of `navigator.geolocation` at document start when the installed Android WebView supports `DOCUMENT_START_SCRIPT`. This does **not** modify Android's location services, system GPS, SIM country, or other applications. Websites may use other signals or reject the override.
+- **Route webpages through my proxy**: enter a real unauthenticated proxy URL such as `http://example.net:8080` or `socks://example.net:1080` and enable routing. There is no bundled proxy, exit IP, credentialed proxy support, or IP-address fabrication. WebView traffic uses the proxy's actual exit IP. The agent relay and other Android apps are not proxied by this setting.
+- **Save & restart browser**: the local agent session stops, the service rebuilds WebViews, and saved non-sensitive URLs are reloaded with the updated settings. Start the agent again if remote commands are needed.
+
+Proxy routing uses AndroidX WebKit `ProxyController`. Saved web URLs are not loaded until the proxy override has been applied, and it does not add an intentional direct-connection fallback. If the WebView lacks proxy support or the configuration is invalid, navigation is blocked rather than silently going direct. Verify the observed public IP with an independent diagnostic website before relying on a proxy. The proxy provider controls what websites see and may observe traffic metadata: avoid unknown free proxies.
+
+Changing browser GPS and network location does not establish legal residence, TikTok account eligibility, or any entitlement to a monetization program; the service may verify additional account, residence and payout signals.
+
+Device acceptance checks: (1) confirm that default settings browse normally; (2) enable GPS test coordinates and test a page that uses `navigator.geolocation`; (3) configure a trusted test proxy, verify the public IP, then disconnect the proxy and confirm pages fail to load rather than falling back; (4) disable the proxy and confirm ordinary browsing is restored.
+
 ## Validation and device checks
 The signed workflow runs URL policy, tab identity/closure, address/history privacy, page-capture and observed-control tests before compiling and verifying the APK signature. Server tests cover until-Stopped sessions and queue durability.
 
