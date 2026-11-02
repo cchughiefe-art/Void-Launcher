@@ -378,6 +378,8 @@ composeCompiler {
 addFrameworkJar('framework-16.jar')
 
 dependencies {
+    // Browser-only HTTP/SOCKS proxy and document-start WebView location testing.
+    implementation "androidx.webkit:webkit:1.18.0"
     implementation projects.iconloaderlib
     implementation projects.searchuilib
     implementation projects.animationlib
