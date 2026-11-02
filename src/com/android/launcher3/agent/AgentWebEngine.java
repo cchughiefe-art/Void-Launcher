@@ -81,6 +81,8 @@ final class AgentWebEngine {
             int selected = settings.prefs.getInt("browser_selected", BrowserTabs.AGENT);
             try { tabs.select(selected); } catch (Exception ignored) { tabs.select(BrowserTabs.AGENT); }
         } catch (Exception ignored) { tabs.select(BrowserTabs.AGENT); }
+        // Set the WebView data directory suffix before AndroidX probes the WebView provider.
+        AgentSettings.prepareWeb();
         configureNetwork();
         web = createPage(BrowserTabs.AGENT);
     }
