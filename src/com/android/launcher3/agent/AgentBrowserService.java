@@ -55,8 +55,8 @@ public class AgentBrowserService extends Service {
     void rebuildBrowserEngine() {
         stopConnection();
         if (engine != null) engine.destroy();
+        settings.status("Reinitializing browser routing. Start agent again after setup.");
         engine = new AgentWebEngine(getApplicationContext(), settings);
-        settings.status("Browser network settings applied. Start agent again if needed.");
     }
     @Override public void onCreate() {
         super.onCreate(); settings = new AgentSettings(this); relay = new AgentRelay(settings);
